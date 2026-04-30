@@ -1,0 +1,13 @@
+#https://docs.microsoft.com/en-us/azure-stack/aks-hci/persistent-volume
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+ name: insight-data-volume
+ namespace: kta
+spec:
+ accessModes:
+ - ReadWriteOnce
+ resources:
+  requests:
+   storage: 5Gi

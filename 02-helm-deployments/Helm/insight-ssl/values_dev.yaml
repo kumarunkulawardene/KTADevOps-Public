@@ -1,0 +1,41 @@
+# Default values for Insight deployment.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+deployment:
+  environmentPrefix: ""
+  # ExampleCustomer Azure Database Server (needs Firewall IP Rule...!)
+  databaseServer: "sample-sql-server.database.windows.net" 
+  databaseUserId: "<REPLACE_ME>"
+  databasePassword: "<REPLACE_ME>"  
+  repository: "sampleacr.azurecr.io"
+
+role:
+  # ROLE - scheduler
+  scheduler:
+    image: insightschedulerssl
+    imagetag: v6.4-AUG2022v2
+    replicaCount: 1
+    hpaminreplicas: 1
+    hpamaxreplicas: 1
+    hpatargetcpu: 70
+    cpu: 1
+    memory: 500M
+    cpulimit: 1
+    memorylimit: 1000M
+    containerport: 13640
+    sharename: insightdata
+
+  # ROLE - Web App Nodes
+  web:
+    image: insightwebssl
+    imagetag: v6.4-AUG2022v3
+    replicaCount: 1
+    hpaminreplicas: 1
+    hpamaxreplicas: 1
+    hpatargetcpu: 70
+    cpu: 2  
+    memory: 2000M
+    cpulimit: 2
+    memorylimit: 2000M
+    sharename: insightdata

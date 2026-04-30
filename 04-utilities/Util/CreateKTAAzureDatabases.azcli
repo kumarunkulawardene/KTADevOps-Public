@@ -1,0 +1,166 @@
+###############################################################################
+# KTA Cloud Training Series - Supporting scripts
+# Create Azure SQL databsaes for KTA
+# 
+# This script includes commands that can be used to create Azure SQL databases 
+# required for KTA and intall the databases using KTA Install media
+#
+# Author: Kofax Professional Services Centre of Excellence (COE) 
+##############################################################################
+
+# ----- CONFIGURE VARIABLES -------
+# You don't need subscription ID if your login is associated with only one subscription.
+$subscription = "<your subscription ID here>"
+$resourceGroup = "COE-RG"
+$location = "uksouth"
+$clusterName = "akskta"
+# ---------------------------------
+
+# ----- Create the Azure SQL Server and databases required ------- 
+# Connect-AzAccount
+
+# Set an admin login and password for your server
+$adminSqlLogin = "kofaxcoesqladmin"
+$password = <DB_PASSWORD>
+
+# Set server name - the logical server name has to be unique in the system
+$serverName = "kofaxcoesqlserver"
+
+# The sample database name
+$databaseName = "TotalAgility"
+# The ip address range that you want to allow to access your server
+$startIp = "121.45.245.124"
+$endIp = "121.45.245.124"
+
+# Another option to get cuurent client IP automatically
+$startIp = Invoke-RestMethod 'http://ipinfo.io/json' | Select-Object -ExpandProperty IP
+$endIp = Invoke-RestMethod 'http://ipinfo.io/json' | Select-Object -ExpandProperty IP
+
+# Set subscription 
+Set-AzContext -SubscriptionId $subscriptionId 
+
+
+# Create a server with a system wide unique server name
+$server = <DB_SERVER>
+    -ServerName $serverName `
+    -Location $location `
+    -SqlAdministratorCredentials $(New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $adminSqlLogin, $(ConvertTo-SecureString -String $password -AsPlainText -Force))
+
+
+# Create a server firewall rule that allows access from the specified IP range
+$serverFirewallRule = New-AzSqlServerFirewallRule -ResourceGroupName $resourceGroup `
+    -ServerName $serverName `
+    -FirewallRuleName "AllowedAKSKTAIPs" -StartIpAddress $startIp -EndIpAddress $endIp
+
+# Create TotalAgility database with an S0 performance level
+$database = New-AzSqlDatabase  -ResourceGroupName $resourceGroup `
+    -ServerName $serverName `
+    -DatabaseName "TotalAgility" `
+    -Collation "SQL_Latin1_General_CP1_CI_AS" `
+    -RequestedServiceObjectiveName  "Basic"
+
+# Create TotalAgility_Documents database with an S0 performance level
+$database = New-AzSqlDatabase  -ResourceGroupName $resourceGroup `
+    -ServerName $serverName `
+    -DatabaseName "TotalAgility_Documents" `
+    -Collation "SQL_Latin1_General_CP1_CI_AS" `
+    -RequestedServiceObjectiveName  "Basic"
+
+# Create TotalAgility_Reporting database with an S0 performance level
+$database = New-AzSqlDatabase  -ResourceGroupName $resourceGroup `
+    -ServerName $serverName `
+    -DatabaseName "TotalAgility_Reporting" `
+    -Collation "SQL_Latin1_General_CP1_CI_AS" `
+    -RequestedServiceObjectiveName  "Basic"
+
+# Create TotalAgility_Reporting_Staging database with an S0 performance level
+$database = New-AzSqlDatabase  -ResourceGroupName $resourceGroup `
+    -ServerName $serverName `
+    -DatabaseName "TotalAgility_Reporting_Staging" `
+    -Collation "SQL_Latin1_General_CP1_CI_AS" `
+    -RequestedServiceObjectiveName  "Basic"
+
+# Create Insight Admin database with an S0 performance level
+$database = New-AzSqlDatabase  -ResourceGroupName $resourceGroup `
+    -ServerName $serverName `
+    -DatabaseName "InsightAdmin" `
+    -Collation "SQL_Latin1_General_CP1_CI_AS" `
+    -RequestedServiceObjectiveName  "Basic"
+
+# ----- Install KTA databases ------- 
+# Warning!!! if you are using a VM/Server that already have KTA installed then ensure the local SQL Server Service is stopped to avoid your existing databases being updated
+# Download KTA install media and unzip to a local drive
+# ------
+# Update the ...\TotalAgilityInstall\SilentInstallConfig.xml and enter/update required data
+# Update DatabaseName, Server, UserName, Password for all databases
+# Set NewDatabase = false for all databases 
+# Set WindowsAuthentication =  false for all databases
+# Set InstallType = DatabaseOnly
+# Set KTAResourceName = ktaadmin
+# Set KTAResourcePassword = <DB_PASSWORD>
+# Set RunAsSystemAccount = false
+# Set InstallDatabases = true
+# Set OverwriteIfExisting = true
+# Set ImportWorkspacePackage = true
+# Set StartServices = false
+# Set CoreWorkerService, ImportService, ImportServiceInstance2, ImportServiceInstance3, ExportService, ReportingService, LicenseService, TransformationService, CoreServices to false
+# ------
+# change directory to KTA install folder i.e. ...\TotalAgilityInstall
+# cd C:\Kofax\KTADeployment\ContainerFiles\TotalAgilityInstall
+# Run the following command
+.\Setup.exe /silent
+
+
+# ----- Backup KTA databases ------- 
+$storageAccount="kofaxcoestorage"
+$containername="ktadbbackups"
+$adminSqlLogin = "kofaxcoesqladmin"
+$password = <DB_PASSWORD>
+$serverName = "kofaxcoesqlserver"
+# Update the database name for each database you want to backup
+$databaseName = "TotalAgility_Reporting"
+
+
+# extract just the storage key
+$storageKey='7l9HOMZewQEHReGlfMLkrCn6kDUko4UtzHDgCrwIsw1IHXUCNiqnmCQeWmSqmP/ieFKibHkkJC3tG0k4pvX7gQ=='
+
+# Create name for backup file and URI - run the following 3 scommands for each database name
+$now=$(Get-Date -Format yyyyMMddHHmmss)
+$backupFileName=$databaseName+"-7.9.0-B4AzureBlob-"+$now+".bacpac"
+$storageURI = "https://"+$storageAccount+".blob.core.windows.net/"+$containername+"/"+$backupFileName
+
+# Create the backup 
+az sql db export -s $serverName -n $databaseName -g $resourceGroup `
+-u $adminSqlLogin -p $password `
+--storage-key-type StorageAccessKey --storage-key $storageKey `
+--storage-uri $storageURI
+# ----- End Backup KTA databases ------- 
+
+# ----- Restore KTA databases ------- 
+$resourceGroup = "COE-RG"
+$storageAccount="kofaxcoestorage"
+$containername="ktadbbackups"
+$adminSqlLogin = "kofaxcoesqladmin"
+$password = <DB_PASSWORD>
+$serverName = "kofaxcoesqlserver"
+# Update the database name for each database you want to backup
+$databaseName = "TotalAgility_Test"
+
+# extract just the storage key
+$storageKey=''
+
+# Create URI to bacpac file
+$backupFileName="TotalAgility-7.9.0-Activated-20210728130300.bacpac" 
+$storageURI = "https://"+$storageAccount+".blob.core.windows.net/"+$containername+"/"+$backupFileName
+
+#Import bacpac file
+az sql db import --name $databaseName `
+--resource-group $resourceGroup `
+--server $serverName `
+-u $adminSqlLogin `
+-p $password `
+--storage-key $storageKey `
+--storage-key-type StorageAccessKey `
+--storage-uri $storageURI
+
+# ----- End Restore KTA databases ------- 

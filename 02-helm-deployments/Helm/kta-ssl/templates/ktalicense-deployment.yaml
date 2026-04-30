@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}ktalicense-deployment
+  namespace: {{ .Values.deployment.environmentPrefix }}kta
+spec:
+  replicas: {{ .Values.role.license.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deployment.environmentPrefix }}kta-license
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deployment.environmentPrefix }}kta-license
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": windows
+      containers:
+      - name: ktalicense
+        image: {{ .Values.deployment.repository }}/{{ .Values.role.license.image }}:{{ .Values.role.license.imagetag }}
+        resources:
+          requests:
+            cpu: {{ .Values.role.license.cpu }}
+            memory: {{ .Values.role.license.memory }}
+          limits:
+            cpu: {{ .Values.role.license.cpulimit }}
+            memory: {{ .Values.role.license.memorylimit }}
+        ports:
+        - containerPort: {{ .Values.role.license.containerport }}
+        envFrom:
+          - configMapRef:
+              name: kta-full-config
+        env:
+          - name: LicensingDatabase
+            valueFrom:
+              secretKeyRef:
+                name: kta-secrets-config
+                key: LicensingDatabase
+{{- /*
+       tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule" 
+*/ -}}
+{{- /*
+       - key: "project"
+        operator: "Equal"
+        value: "kta"
+        effect: "NoSchedule" 
+*/ -}}
+ 
+                

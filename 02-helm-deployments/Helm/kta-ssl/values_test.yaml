@@ -1,0 +1,69 @@
+# Default values for kta deployment.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+deployment:
+  environmentPrefix: ""
+  # ExampleCustomer Azure Database Server (needs Firewall IP Rule...!)
+  databaseServer: "sample-sql-server.database.windows.net" 
+  databaseUserId: "<REPLACE_ME>"
+  databasePassword: "<REPLACE_ME>"
+  reporsitory: "sampleacr.azurecr.io"
+
+role:
+  # ROLE - License
+  license:
+    image: ktalicense
+    imagetag: v7.9
+    replicaCount: 1 
+    cpu: 0.2
+    memory: 512Mi
+    cpulimit: 1
+    memorylimit: 1Gi
+    containerport: 3581
+  
+  # ROLE - Web App Nodes (incl. core worker)
+  webapp:
+    image: ktawebappssl
+    imagetag: v7.9
+    replicaCount: 1
+    cpu: 0.5
+    memory: 4Gi
+    cpulimit: 1
+    memorylimit: 4Gi
+    containerport: 443
+    sharename: kta-data
+    scheme: HTTPS
+        
+  # ROLE - Transformation
+  transformation: 
+    image: ktatransformation
+    imagetag: v7.9
+    replicaCount: 1
+    cpu: 1
+    memory: 4Gi
+    cpulimit: 2
+    memorylimit: 4Gi
+    containerport: 9001 
+    sharename: kta-data 
+  
+  # ROLE - Message Connector
+  mc: 
+    image: ktamessageconnector
+    imagetag: v7.9
+    replicaCount: 1
+    cpu: 0.5
+    memory: 4Gi
+    cpulimit: 1
+    memorylimit: 4Gi
+    containerport: 25086 
+
+  # ROLE - Reporting
+  reporting: 
+    image: ktareporting
+    imagetag: v7.9
+    replicaCount: 1
+    cpu: 0.5
+    memory: 1Gi
+    cpulimit: 1
+    memorylimit: 2Gi

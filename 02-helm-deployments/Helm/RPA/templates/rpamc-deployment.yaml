@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}rpamc-deployment
+  namespace: {{ .Values.deployment.environmentPrefix }}kta  
+spec:
+  replicas: {{ .Values.role.mc.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deployment.environmentPrefix }}rpa-mc
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deployment.environmentPrefix }}rpa-mc
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": windows
+      containers:
+      - name: rpamc
+        image: {{ .Values.deployment.reporsitory }}/{{ .Values.role.mc.image }}:{{ .Values.role.mc.imagetag }}
+        resources:
+          requests:
+            cpu: {{ .Values.role.mc.cpu }}
+            memory: {{ .Values.role.mc.memory }}
+          limits:
+            cpu: {{ .Values.role.mc.cpulimit }}
+            memory: {{ .Values.role.mc.memorylimit }}
+        ports:
+        - containerPort: {{ .Values.role.mc.containerport }}
+        envFrom:
+          - configMapRef:
+              name: rpa-mc-config
+          - secretRef:
+              name: rpa-mc-secrets-config
+        readinessProbe:
+          httpGet:
+            path: /login.jsp
+            port: 8080
+          periodSeconds: 3
+          timeoutSeconds: 60
+        volumeMounts:
+          - name: {{ .Values.deployment.environmentPrefix }}rpa-mc-data-azurefile
+            mountPath: "D:"
+      volumes:
+        - name: {{ .Values.deployment.environmentPrefix }}rpa-mc-data-azurefile
+          persistentVolumeClaim:
+            claimName: rpa-mc-azurefile-pvc
+

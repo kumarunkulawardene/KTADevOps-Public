@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}insight-deployment
+  namespace: {{ .Values.deployment.environmentPrefix }}kta  
+spec:
+  replicas: {{ .Values.role.web.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deployment.environmentPrefix }}insight-web
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deployment.environmentPrefix }}insight-web 
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": windows
+      containers:
+        - name: {{ .Values.deployment.environmentPrefix }}insight-web 
+          image: {{ .Values.deployment.repository }}/{{ .Values.role.web.image }}:{{ .Values.role.web.imagetag }}
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: {{ .Values.role.web.cpu }}
+              memory: {{ .Values.role.web.memory }}
+            limits:
+              cpu: {{ .Values.role.web.cpulimit }}
+              memory: {{ .Values.role.web.memorylimit }}
+          ports:
+            - containerPort: 443
+            - containerPort: 80
+          envFrom:
+          - configMapRef:
+             name: {{ .Values.deployment.environmentPrefix }}insight-full-config
+          - secretRef:
+              name: {{ .Values.deployment.environmentPrefix }}insight-secrets-config
+          readinessProbe:
+            httpGet:
+              path: /WcfDataService/DataService.svc
+              port: 443
+              scheme: HTTPS 
+            periodSeconds: 10
+            timeoutSeconds: 60              
+          volumeMounts:
+            - name: {{ .Values.deployment.environmentPrefix }}insight-data-azurefile
+              mountPath: "D:"
+      volumes:
+        - name: {{ .Values.deployment.environmentPrefix }}insight-data-azurefile
+          persistentVolumeClaim:
+            claimName: insight-azurefile-pvc
+      {{- /*
+ tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule" 
+*/ -}}
+{{- /*
+       - key: "project"
+        operator: "Equal"
+        value: "kta"
+        effect: "NoSchedule" 
+*/ -}}

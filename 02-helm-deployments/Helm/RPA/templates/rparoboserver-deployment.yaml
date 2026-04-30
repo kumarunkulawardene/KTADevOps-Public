@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}rpa-roboserver-deployment
+  namespace: {{ .Values.deployment.environmentPrefix }}kta  
+spec:
+  replicas: {{ .Values.role.roboserver.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deployment.environmentPrefix }}rpa-roboserver
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deployment.environmentPrefix }}rpa-roboserver
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": windows
+      containers:
+      - name: rparoboserver
+        image: {{ .Values.deployment.reporsitory }}/{{ .Values.role.roboserver.image }}:{{ .Values.role.roboserver.imagetag }}
+        resources:
+          requests:
+            cpu: {{ .Values.role.roboserver.cpu }}
+            memory: {{ .Values.role.roboserver.memory }}
+          limits:
+            cpu: {{ .Values.role.roboserver.cpulimit }}
+            memory: {{ .Values.role.roboserver.memorylimit }}
+        ports:
+        - containerPort: {{ .Values.role.roboserver.containerport }}
+        envFrom:
+          - configMapRef:
+              name: rpa-rs-config
+          - secretRef:
+              name: rpa-rs-secrets-config
+        volumeMounts:
+          - name: {{ .Values.deployment.environmentPrefix }}rpa-mc-data-azurefile
+            mountPath: "D:"
+      volumes:
+        - name: {{ .Values.deployment.environmentPrefix }}rpa-mc-data-azurefile
+          persistentVolumeClaim:
+            claimName: rpa-mc-azurefile-pvc
+

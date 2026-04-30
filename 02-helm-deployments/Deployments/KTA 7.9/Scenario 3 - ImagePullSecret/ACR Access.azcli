@@ -1,0 +1,56 @@
+############################################################################
+# REFERENCE ONLY
+# This script demonstrates how to use a 'Pull Secret' to attach to a private 
+# container repo.
+# There are a number of options how to use the credentials from the AKS cluster. 
+# In this case we describe referencing the Pull Secret from the pod deployment files.  
+############################################################################
+
+#!/bin/bash
+# This script requires Azure CLI version 2.25.0 or later. Check version with `az --version`.
+
+# Modify for your environment.
+# ACR_NAME: The name of your Azure Container Registry
+$ACR_NAME='sampleacr'
+
+#### IF YOU HAVE PERMISSION IN THE SUBSCRIPTION TO CREATE A SERVICE PRINCIPAL #####
+# SERVICE_PRINCIPAL_NAME: Must be unique within your AD tenant
+$SERVICE_PRINCIPAL_NAME='SP-KTA-ACR'
+
+# Obtain the full registry ID for subsequent command args
+$ACR_REGISTRY_ID=$(az acr show --name $ACR_NAME --query id --output tsv)
+
+# Create the service principal with rights scoped to the registry.
+# Default permissions are for docker pull access. Modify the '--role'
+# argument value as desired:
+# acrpull:     pull only
+# acrpush:     push and pull
+# owner:       push, pull, and assign roles
+$SP_PASSWD=$(az ad sp create-for-rbac `
+--name $SERVICE_PRINCIPAL_NAME `
+--scopes $ACR_REGISTRY_ID `
+--role acrpull `
+--query password `
+--output tsv)
+
+$SP_APP_ID=$(az ad sp list --display-name $SERVICE_PRINCIPAL_NAME --query [].appId --output tsv)
+
+#### IF YOU DO NOT HAVE PERMISSION IN THE SUBSCRIPTION TO CREATE A SERVICE PRINCIPAL #####
+# Create secret using ACR Admin user (not recommended)
+$SP_APP_ID= 'kofaxcoe'
+$SP_PASSWD = 'roiAvtwZ05P=Zh+tZ7iS9QIt6xa8ga3D' 
+
+# Create Image Pull Secret
+# note: We could alternatively put this in a YAML file (Kind: Secret) 
+# and upload it like the other secret file.
+kubectl create secret docker-registry kta-acr-secret `
+--namespace $namespace `
+--docker-server=<DB_SERVER>
+--docker-username=$SP_APP_ID `
+--docker-password=<DOCKER_PASSWORD>
+
+## TO DO
+# Add this snippet to the various pod 'deployment' files nested under 'spec' element.
+          imagePullSecrets:
+          - name: kta-acr-secret
+        

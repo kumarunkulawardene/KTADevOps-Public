@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ktalicense-deployment
+  namespace: kta
+  labels:
+    app: ktalicense  
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ktalicense
+  template:
+    metadata:
+      labels:
+        app: ktalicense
+    spec:
+      containers:
+      - name: ktalicense
+        image: sampleacr.azurecr.io/ktalicense:v7.9
+        resources:
+          requests:
+            cpu: 1
+            memory: 1Gi
+          limits:
+            cpu: 1
+            memory: 1Gi
+        ports:
+        - containerPort: 3581
+        envFrom:
+          - configMapRef:
+              name: ktawebapp-config-secure
+        env:
+          - name: LicensingDatabase
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_LicenseDB_ConnectionString
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ktalicense  
+  namespace: kta  
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3581
+  selector:
+    app: ktalicense

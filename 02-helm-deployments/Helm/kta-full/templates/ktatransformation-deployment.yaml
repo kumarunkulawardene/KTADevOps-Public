@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}ktatransformation-deployment
+  namespace: {{ .Values.deployment.environmentPrefix }}kta
+spec:
+  replicas: {{ .Values.role.transformation.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deployment.environmentPrefix }}kta-transformation
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deployment.environmentPrefix }}kta-transformation
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": windows
+      containers:
+      - name: ktatransformation
+        image: sampleacr.azurecr.io/ktatransformation:v7.9.0.9
+        resources:
+          requests:
+            cpu: {{ .Values.role.transformation.cpu }}
+            memory: {{ .Values.role.transformation.memory }}
+          limits:
+            cpu: {{ .Values.role.transformation.cpulimit }}
+            memory: {{ .Values.role.transformation.memorylimit }}
+        ports:
+          - containerPort: {{ .Values.role.transformation.containerport }}
+        envFrom:
+          - configMapRef:
+              name: kta-full-config
+          - secretRef:
+              name: ktats-secrets-config
+        volumeMounts:
+            - name: {{ .Values.deployment.environmentPrefix }}ktats-data-azurefile
+              mountPath: "D:"
+      volumes:
+        - name: {{ .Values.deployment.environmentPrefix }}ktats-data-azurefile
+          azureFile:
+            secretName: kta-share-secret
+            shareName: {{ .Values.role.transformation.sharename }}
+            readOnly: false
+                

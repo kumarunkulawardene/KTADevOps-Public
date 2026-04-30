@@ -1,0 +1,117 @@
+
+#NOTE: 
+# This script is not intended to be run end-to-end. 
+# Run individual commands as required. 
+
+# Login to Azure (will launch browser to authenticate)
+az login 
+
+# Set subscription (if more than one)
+# Enterprise
+az account set --subscription 8d2d89dc-XXXXX-XXXXXX-XXXXX-XXXXXXXXXXXX
+# Premium
+az account set --subscription a8e0919a-XXXXX-XXXXX-XXXXX-XXXXXXXXXXXX
+
+# Create Resource Group
+az group create --name rgkta68 --location ukwest
+
+#verify supported AKS versions for target region (or omit below and get default?)
+#az aks get-versions -l ukwest
+
+# CLUSTER OPTION 1 - DEV ONLY PUBLIC NETWORK
+# Create AKS Cluster (with Managed Identity) - HTTP_APPLICAITON_ROUTING ADD-ON (Non Prod Only)
+# Must add Windows Credentials to suport windows node pools being added later
+# Password must be min 14 chars (include lower, upper, number, special character...3 of 4)
+az aks create -g rgkta68 --name akskta --enable-managed-identity --generate-ssh-keys --node-count 1 --kubernetes-version 1.20.7 --enable-addons  http_application_routing,monitoring --windows-admin-username akskta --windows-admin-password <WINDOWS_ADMIN_PASSWORD> --network-plugin azure
+
+# CLUSTER OPTION 2 - AGIC
+# Create AKS Cluster with Managed Identity - AGIC
+# Must add Windows Credentials to suport windows node pools being added later
+# Password must be min 14 chars (include lower, upper, number, special character...3 of 4)
+# CAN BE DEPLOYED USING HELM, BUT THIS ADD-ON MECHANISM IS EASIER AND IS FULLY MANAGED (UPDATES ETC.)
+az aks create -g rgkta68 --name akskta --enable-managed-identity --generate-ssh-keys --node-count 1 --kubernetes-version 1.20.7 --enable-addons ingress-appgw,monitoring --appgw-name ktaAppGateway --appgw-subnet-cidr "10.2.0.0/16" --windows-admin-username akskta --windows-admin-password <WINDOWS_ADMIN_PASSWORD> --network-plugin azure
+
+#attach ACR -
+#note: 
+#   use full resource string when in differnet subscription otherwise name is enough
+#   deploy to same datacenter to avoid data transfer costs
+# Different Subscription...
+# Same Subscription...
+az aks update -g rgkta68 --name akskta --attach-acr sampleacr
+#confirm access to AKR
+az aks check-acr -g rgkta68 --name akskta --acr /subscriptions/a8e0919a-XXXXX-XXXXX-XXXXX-XXXXXXXXXXXX/resourceGroups/rgWinDocker2019/providers/Microsoft.ContainerRegistry/registries/sampleacr
+az aks check-acr -g rgkta68 --name akskta --acr sampleacr
+
+#note: pool name max 6 chars
+az aks nodepool add --cluster-name akskta -g rgkta68 -n pool1 --mode User --node-vm-size Standard_D4s_v3 --os-type Windows --node-osdisk-size 100 --node-count 1 --max-pods 10
+
+az aks nodepool update --resource-group rgkta68 --cluster-name akskta --name pool1 --enable-cluster-autoscaler --min-count 1 --max-count 3
+# az aks nodepool update --resource-group rgkta68 --cluster-name akskta --name pool1 --update-cluster-autoscaler --min-count 1 --max-count 3
+
+# Examine pools
+# az aks nodepool list --cluster-name akskta -g rgkta68
+# az aks nodepool show --cluster-name akskta -g rgkta68 -n pool1
+
+# Examine nodes
+kubectl get nodes
+
+#Create a namespace for the deployments, pods etc.
+# fails at this point as cluster context is still old one...
+#kubectl delete namespaces kta
+kubectl create -f namespace-kta.yaml
+
+#kubectl delete configmap ktawebapp-config --namespace kta
+kubectl create configmap ktawebapp-config --from-env-file=DockerSettingsAzure.Env --namespace kta
+#kubectl create configmap ktawebappconfig-secure --from-env-file=DockerSettings_OnPremise_WebApPSecure.Env --namespace kta
+
+# secrets for connection strings
+kubectl apply -f .\secret_databaseconnections.yaml
+
+#Container Deployment
+# kubectl create -f deploy_ktawebapp.yaml
+# kubectl create -f deploy_ktawebapp_secret.yaml
+# kubectl create -f deploy_ktawebapp_AGIC.yaml
+
+#Container Deployment \ Update - Declarative Command
+kubectl apply -f deploy_ktawebapp_AGIC.yaml
+# Compare YAML to actual deployment - Requires Diff Util (for windows)...install chocolatey and then use chocco diffutil
+kubectl diff -f deploy_ktawebapp_AGIC.yaml
+
+#Watch the service to see when external IP assigned (CTRL-C when ip updates to stop watching) - DOESN'T APPLY for AGIC deployment
+kubectl get service aks-kta --watch
+
+#USEFUL COMMANDS
+#Get IP details
+kubectl --namespace default get services -o wide -w akskta
+
+# Stop\Start AKS Cluster
+az aks stop -g rgkta68 --name akskta
+az aks start -g rgkta68 --name akskta
+
+# Clean Up
+az group delete --name rgkta68
+
+# Create Key Vault
+az keyvault create --name "kvkofaxcoe" --resource-group "rgkta68" --location "ukwest"
+
+# Examine run logs
+kubectl get pods -n kta
+kubectl logs <podname> -n kta
+
+# Restarting Pods
+kubectl scale deployment [deployment_name] --replicas=0
+kubectl scale deployment [deployment_name] --replicas=1az 
+
+az aks nodepool get-upgrades `
+    --nodepool-name pool1 `
+    --cluster-name kta-cluster `
+    --resource-group rgakskta
+
+az aks upgrade `
+    --node-image-only `
+    --cluster-name kta-cluster `
+    --resource-group rgakskta
+
+
+az aks stop -g rgakskta --name kta-cluster
+az aks start -g rgakskta --name kta-cluster

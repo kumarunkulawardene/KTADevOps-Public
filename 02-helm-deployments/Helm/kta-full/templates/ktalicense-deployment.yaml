@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}ktalicense-deployment
+  namespace: {{ .Values.deployment.environmentPrefix }}kta
+spec:
+  replicas: {{ .Values.role.license.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deployment.environmentPrefix }}kta-license
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deployment.environmentPrefix }}kta-license
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": windows
+      containers:
+      - name: ktalicense
+        image: sampleacr.azurecr.io/ktalicense:v7.9
+        command: ["powershell"]
+        args: ["C:\\KTA\\PowershellScripts\\Startup.ps1"]
+        resources:
+          requests:
+            cpu: {{ .Values.role.license.cpu }}
+            memory: {{ .Values.role.license.memory }}
+          limits:
+            cpu: {{ .Values.role.license.cpulimit }}
+            memory: {{ .Values.role.license.memorylimit }}
+        ports:
+        - containerPort: {{ .Values.role.license.containerport }}
+        envFrom:
+          - configMapRef:
+              name: kta-full-config
+        env:
+          - name: LicensingDatabase
+            valueFrom:
+              secretKeyRef:
+                name: kta-secrets-config
+                key: LicensingDatabase
+                

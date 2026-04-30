@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}kta-mc-service  
+  namespace: {{ .Values.deployment.environmentPrefix }}kta  
+spec:
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 25086
+  selector:
+    app: {{ .Values.deployment.environmentPrefix }}kta-mc
+    

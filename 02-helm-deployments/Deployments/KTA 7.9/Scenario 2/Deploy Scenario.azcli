@@ -1,0 +1,49 @@
+# This script is run to deploy into an existing AKS Cluster
+# See create_aks_cluster_generic.azcli script for cluster creation
+
+$subscription = "8d2d89dc-XXXXX-XXXXXX-XXXXX-XXXXXXXXXXXX"
+$resourceGroup = "rgktasouth"
+$location = "uksouth"
+$clusterName = "akskta"
+$ACR = "/subscriptions/a8e0919a-XXXXX-XXXXX-XXXXX-XXXXXXXXXXXX/resourceGroups/rgWinDocker2019/providers/Microsoft.ContainerRegistry/registries/sampleacr"
+# if container registry resides in same subscription, use the simplified reference
+#$ACR = "sampleacr"
+
+# Login to Azure (will launch browser to authenticate)
+az login 
+
+# Set subscription (if more than one)
+# Premium
+az account set --subscription $subscription
+
+#Create a namespace for the deployments, pods etc.
+# fails at this point if cluster context is not correct one...
+#kubectl delete namespaces kta
+#note: navigate to the sceanrio folder where the yaml file resides.
+kubectl create -f namespace-kta.yaml
+
+#kubectl delete configmap ktawebapp-config-secure --namespace kta
+#Upload the relevant run-time settings file.
+# namespace specified should map value in above yaml file
+kubectl create configmap ktawebapp-config-secure --from-env-file=DockerSettings_WebAppSecure.Env --namespace kta
+
+# secrets for connection strings
+#note: yaml file references namespace created above
+kubectl apply -f .\secret_databaseconnections.yaml
+
+#attach ACR -
+#note: 
+#   Before executing the below 
+#       -> Grant user executing this script ACRPull Permission on the ACR via the portal
+#   if you deploy to same datacenter to avoid data transfer costs
+az aks update -g $resourceGroup --name $clusterName --attach-acr $ACR
+
+#OPTIONAL confirm access to AKR 
+#note: might throw 'failed to check the ACR...returned non-zero exit status 1' error...
+#       just ignore
+az aks check-acr -g $resourceGroup --name $clusterName --acr $ACR
+
+#Container Deployment \ Update - Declarative Command
+kubectl apply -f deploy_ktalicense.yaml
+kubectl apply -f deploy_ktawebapp_AGIC_Secure.yaml
+

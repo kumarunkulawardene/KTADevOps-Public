@@ -1,0 +1,53 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+parameters:
+  - name: ConfigToUse
+    displayName: Environment config file to use
+    default: dev
+
+  - name: azureSubscription
+    displayName: "Name of azure service connection"
+    type: string
+    default: "kofaxktasolution-nonprod-service-connection"
+
+trigger: none
+
+pool:
+  name: 'AKSAgents'
+
+steps:
+- task: HelmInstaller@0
+  inputs:
+    helmVersion: '2.14.1'
+    installKubectl: true
+# - task: AzureCLI@2
+#   displayName: "Install Helm charts - KTA"
+#   inputs:
+#     azureSubscription: 'kofaxktasolution-nonprod-service-connection'
+#     scriptType: 'pscore'
+#     scriptLocation: 'scriptPath'
+#     scriptPath: 'Helm Install-kta-ExampleCustomer.ps1'
+#     addSpnToEnvironment: true
+
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: 'kofaxktasolution-nonprod-service-connection'
+    scriptType: 'pscore'
+    scriptLocation: 'scriptPath'
+    # scriptPath: 'Helm Uninstall-insights-ExampleCustomer.ps1'
+    # scriptPath: 'Helm Install-insights-ExampleCustomer.ps1'
+    # scriptPath: 'Helm Uninstall-kta-ExampleCustomer.ps1'
+    # scriptPath: 'Helm Install-kta-ExampleCustomer.ps1'
+    #scriptPath: 'Helm Upgrade-insights.ps1'
+    scriptPath: 'Helm Upgrade-kta-ExampleCustomer.ps1'
+    powerShellErrorActionPreference: 'silentlyContinue'
+    addSpnToEnvironment: true
+
+
+
+
+
+
+

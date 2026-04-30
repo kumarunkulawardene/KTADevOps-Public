@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: insight-ingress
+  namespace: kta
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+    appgw.ingress.kubernetes.io/health-probe-path: "/WcfDataService/DataService.svc"
+    appgw.ingress.kubernetes.io/connection-draining-timeout: "120"
+    appgw.ingress.kubernetes.io/request-timeout: "120"
+    appgw.ingress.kubernetes.io/backend-path-prefix: "/"
+    appgw.ingress.kubernetes.io/override-frontend-port: "80"
+    #appgw.ingress.kubernetes.io/use-private-ip: "true"
+    #appgw.ingress.kubernetes.io/appgw-ssl-certificate: kofaxtalcert
+spec:
+  rules:
+    - http:
+        paths:
+          - path: '/'
+            pathType: Prefix
+            backend:
+              service:
+                name: insight-web
+                port: 
+                  number: 80

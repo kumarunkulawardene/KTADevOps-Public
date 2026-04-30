@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}kta-deployment
+  namespace: {{ .Values.deployment.environmentPrefix }}kta  
+spec:
+  replicas: {{ .Values.role.webapp.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deployment.environmentPrefix }}kta-webapp
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deployment.environmentPrefix }}kta-webapp
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": windows
+      containers:
+        - name: ktawebapp
+          image: sampleacr.azurecr.io/ktawebapp:v7.9-ssl
+          imagePullPolicy: Always
+          volumeMounts:
+            - mountPath: "C:\\tls-certs\\"
+              name: kta-tls-vol
+              readOnly: true
+            - mountPath: "C:\\tls-root-certs\\"
+              name: kta-tls-root-vol
+              readOnly: true
+          resources:
+            requests:
+              cpu: '1'
+              memory: 4Gi
+            limits:
+              cpu: '2'
+              memory: 4Gi
+          ports:
+            - containerPort: 80
+            - containerPort: {{ .Values.role.webapp.port }}
+          envFrom:
+            - configMapRef:
+                name: kta-full-config
+            - secretRef:
+                name: kta-secrets-config
+          readinessProbe:
+            httpGet:
+              path: /TotalAgility/Services/SDK/ServerService.svc
+              scheme: HTTPS
+              httpHeaders:
+                - name: Host
+                  value: kofaxpstal   
+              port: {{ .Values.role.webapp.port }}
+            periodSeconds: 3
+            timeoutSeconds: 60
+      volumes:
+        - name: kta-tls-vol
+          configMap:
+            name: kta-tls-config
+        - name: kta-tls-root-vol
+          configMap:
+            name: kta-tls-root-config

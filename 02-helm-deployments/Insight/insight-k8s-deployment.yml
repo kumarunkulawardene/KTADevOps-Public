@@ -1,0 +1,158 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: insight-web
+  namespace: kta
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: insight-web
+  template:
+    metadata:
+      labels:
+        app: insight-web
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": windows
+      containers:
+        - name: insight-web
+          image: sampleacr.azurecr.io/insightweb:v6.4
+          env:
+            - name: DataService_IsDocker
+              value: "true"
+            - name: DataService_Insight.LicenseFolder
+              value: "D:/"
+            - name: DataService_UseHighAvailability
+              value: "true"
+            - name: DataService_Insight.UseIpAddressInsteadOfHost
+              value: "true"
+            - name: DataService_Insight.Admin.MasterDBConnectionString
+              value: "Data Source=<DB_SERVER>; Initial Catalog=InsightAdmin; Password=<DB_PASSWORD>; User Id=<DB_USER>;"
+            - name: DataService_Insight.TenantAdmin.MasterDBConnectionString
+              value: " "
+            - name: DataService_Insight.Password
+              value: "XXXXXXXXX"
+            - name: DataService_Insight.Admin.MasterDBName
+              value: "MS SQL Server"
+            - name: Insight_DataServiceUrl
+              value: "http://insight-web/WcfDataService/DataService.svc"
+            - name: DataService_Insight.Admin.MasterDBProviderName
+              value: "sql"
+            - name: Insight_HtmlServiceUrl
+              value: "http://insight-web/WcfDataService/HtmlDataService.svc"
+            - name: Insight_ViewerUrl
+              value: "http://insight-web/View/Default.aspx"
+            - name: ChartSnapshot_Insight.Pdf.AdditionalArguments
+              value: "--no-sandbox"
+            - name: Insight_MachineDecryptionKey
+              value: "C48DEB5B8D3794CE3F1BB64FA6D7F7F73EF008DF8CE7DB8AE3CADABA5BF0BC76"
+            - name: Insight_MachineValidationKey
+              value: "DAF470B01D0FAC42407216B923F15BFBD983D975FDE2516A300FAFFDADA34FD8C589881252662F729B65A7CC7040B8A57C8CA85D173923AEF5E2706DB21D6F35"
+
+          resources:
+            requests:
+              cpu: 0.5
+              memory: 1024M
+            limits:
+              cpu: 1
+              memory: 2048M
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - mountPath: "D:"
+              name: insight-data-azurefile
+      #imagePullSecrets:
+      #  - name: regcred
+      volumes:
+        - name: insight-data-azurefile
+          persistentVolumeClaim:
+            claimName: insight-data-azurefile
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: insight-web
+  namespace: kta
+spec:
+  #type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  selector:
+    app: insight-web
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: insight-scheduler
+  namespace: kta
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: insight-scheduler
+  template:
+    metadata:
+      labels:
+        app: insight-scheduler
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": windows
+      containers:
+        - name: insight-scheduler
+          image: sampleacr.azurecr.io/insightscheduler:v6.4
+          resources:
+            requests:
+              cpu: 0.2
+              memory: 1024M
+            limits:
+              cpu: 0.6
+              memory: 2048M
+          ports:
+            - containerPort: 13640
+              name: scheduler
+          env:
+            - name: Scheduler_Login
+              value: "Administrator"
+            - name: Scheduler_Password
+              value: "XXXXXXXXX"
+            - name: Scheduler_DataServiceUrl
+              value: "http://insight-web/WcfDataService/DataService.svc"
+            - name: "DashboardServer_DataServiceUrl"
+              value: "http://insight-web/WcfDataService/DataService.svc"
+            - name: DashboardServer_BridgeServiceURI
+              value: "tcp://insight-scheduler:15870/IBridgeService.rem"
+            - name: Scheduler_UseIpAddressInsteadOfHost
+              value: "true"
+          volumeMounts:
+            - mountPath: "D:"
+              name: insight-data-azurefile
+      #imagePullSecrets:
+      #  - name: regcred
+      volumes:
+        - name: insight-data-azurefile
+          persistentVolumeClaim:
+            claimName: insight-data-azurefile
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: insight-scheduler
+  namespace: kta
+spec:
+  selector:
+    app: insight-scheduler
+  ports:
+    - port: 13640

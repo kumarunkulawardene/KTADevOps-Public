@@ -1,0 +1,86 @@
+ktawebappfe
+
+openssl ecparam -out ktawebappfe.key -name prime256v1 -genkey
+openssl req -new -sha256 -key ktawebappfe.key -out ktawebappfe.csr -subj "/CN=ktawebappfe"
+openssl x509 -req -sha256 -days 365 -in ktawebappfe.csr -signkey ktawebappfe.key -out ktawebappfe.crt
+
+
+ktawebappbe
+
+openssl ecparam -out ktawebappbe.key -name prime256v1 -genkey
+openssl req -new -sha256 -key ktawebappbe.key -out ktawebappbe.csr -subj "/CN=ktawebappbe"
+openssl x509 -req -sha256 -days 365 -in ktawebappbe.csr -signkey ktawebappbe.key -out ktawebappbe.crt
+
+openssl pkcs12 -export -out ktawebappbe.pfx -inkey ktawebappbe.key -in ktawebappbe.crt -certfile CACert.crt
+
+openssl pkcs12 -export -in ktawebappbe.cer -inkey ktawebappbe.key -out ktawebappbe.pfx
+
+docker run --env-file "C:\kta\DockerSettings_OnPremise_FullInstall.env" `
+-e KTA_SSL_CERT_PASSWORD=<DB_PASSWORD>
+KTA_SSL_CERT_PATH="C:\KTA\Certs\ktawebappbe.pfx" -v "C:\KTA\Certs:C:\KTA\Certs" -p `
+5000:443 -d ktawebappssl:v7.9
+
+Get-ChildItem -path cert:\LocalMachine\WebHosting
+
+Get-WebBinding
+
+Set-WebBinding -Name "Default Web Site" -BindingInformation "*:443:" -PropertyName "HostHeader" -Value "analytics.customer.example.com"
+
+kubectl exec -it kta-deployment-bfb9bd6d6-qlnht  -- curl -k https://localhost:443/TotalAgility/Services/SDK/ServerService.svc
+kubectl exec -it kta-deployment-bfb9bd6d6-scqjb  -- curl -k https://10.194.17.11:443/TotalAgility/Services/SDK/ServerService.svc
+
+applicationGatewayName="ktaAppGateway"
+resourceGroup="COE-RG"
+az network application-gateway root-cert create `
+    --gateway-name ktaAppGateway  `
+    --resource-group MC_COE-RG_aksktakk_uksouth `
+    --name ktawebappbe-cert `
+    --cert-file C:\KTA\Certs\ktawebappbe.pfx
+
+kubectl create secret tls kta-backend-tls-secret --key="C:\KTA\Certs\Sep2022\ktawebappbe.key" --cert="C:\KTA\Certs\Sep2022\ktawebappbe.crt" -n kta
+
+kubectl create secret tls kta-frontend-tls-secret --key="C:\KTA\Certs\Sep2022\ktawebappfe.key" --cert="C:\KTA\Certs\Sep2022\ktawebappfe.crt" -n kta
+
+Invoke-Expression ".\ImportSSLCert.ps1 -certPath 'D:/example-cert-w-chain.pfx' -certPassword 'XXXXX' -bindingHostHeader 'nonprod.web.kofax.internal.customer.example.com'";
+
+kubectl port-forward -n kta kta-deployment-bfb9bd6d6-qlnht 443:443
+
+# Check SSL errors - run in pod
+curl.exe -K -H "Host:analytics.customer.example.com" "https://localhost" -v
+
+(Get-Content .\ImportSSLCert.ps1 ).Replace('WebHosting','My') | Out-File c:\kta\ImportSSLCert.ps1
+
+
+
+Get-WebBinding -Port 443 -Name "Default Web Site" | Remove-WebBinding
+
+$iisWebsiteName="Default Web Site"
+$thumbprints = Get-ChildItem -path cert:\LocalMachine\WebHosting;
+$binding1 = Get-WebBinding -Name $iisWebsiteName -Port 443 -Protocol "https";
+$binding1.AddSslCertificate($thumbprints[0].Thumbprint, "My");
+
+$rootStore = New-Object System.Security.Cryptography.X509Certificates.X509Store -ArgumentList Root, LocalMachine
+$rootStore.Open("MaxAllowed")
+$rootStore.Add($cert)
+$rootStore.Close()
+
+cd iis:
+new-item -path IIS:\SslBindings\0.0.0.0!443 -value $cert
+New-WebBinding -Name "Default Web Site" -IP "*" -Port 443 -Protocol https
+iisreset
+
+
+#Install root and ca certificates
+$file = (Get-ChildItem -Path $rootCertPath )
+$file | Import-Certificate -CertStoreLocation cert:\LocalMachine\Root
+$file = (Get-ChildItem -Path $caCertPath )
+$file | Import-Certificate -CertStoreLocation cert:\LocalMachine\CA
+
+
+$headers = @{
+ 'Host'='ktawebappbe'
+ }
+
+ $Response = Invoke-WebRequest -URI https://localhost/insight/admin -Headers $headers 
+
+  $Response = Invoke-WebRequest -URI https://localhost/insight/admin -Headers $headers 

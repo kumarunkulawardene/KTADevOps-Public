@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: kta-mc-azurefile-pvc
+  namespace: {{ .Values.deployment.environmentPrefix }}kta
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  azureFile:
+    secretName: kta-share-secret
+    shareName: {{ .Values.role.mc.sharename }}
+    readOnly: false
+  mountOptions:
+  - dir_mode=0777
+  - file_mode=0777
+  - uid=<DB_USER>
+  - gid=1000
+  - mfsymlinks
+  - nobrl

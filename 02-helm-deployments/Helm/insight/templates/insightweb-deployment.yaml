@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}insight-deployment
+  namespace: {{ .Values.deployment.environmentPrefix }}kta  
+spec:
+  replicas: {{ .Values.role.web.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deployment.environmentPrefix }}insight-web
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deployment.environmentPrefix }}insight-web 
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": windows
+      containers:
+        - name: {{ .Values.deployment.environmentPrefix }}insight-web 
+          image: sampleacr.azurecr.io/insightweb:v6.4
+          resources:
+            requests:
+              cpu: {{ .Values.role.web.cpu }}
+              memory: 1024M
+            limits:
+              cpu: {{ .Values.role.web.cpulimit }}
+              memory: 2048M
+          ports:
+            - containerPort: {{ .Values.role.web.containerport }}
+          volumeMounts:
+            - mountPath: "C:/Temp/InsightData"
+              name: {{ .Values.deployment.environmentPrefix }}insight-data-azurefile
+          envFrom:
+          - configMapRef:
+              name: {{ .Values.deployment.environmentPrefix }}insight-full-config
+          - secretRef:
+              name: {{ .Values.deployment.environmentPrefix }}insight-secrets-config
+          readinessProbe:
+            httpGet:
+              path: /WcfDataService/DataService.svc
+              port: 80
+            periodSeconds: 3
+            timeoutSeconds: 60   
+      volumes:
+        - name: {{ .Values.deployment.environmentPrefix }}insight-data-azurefile
+          persistentVolumeClaim:
+            claimName: {{ .Values.deployment.environmentPrefix }}insight-data-azurefile

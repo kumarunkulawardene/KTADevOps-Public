@@ -1,0 +1,21 @@
+# This establishes a service endpoint for the KTA license server.
+# pointing to the KTA Web\App pods.
+# This enables the Service\Pod IP to change without impacting the endpoint
+# License server endpoint in designer will be 'ktalicense'
+# 
+# The selector (which is highly configurable)should resolve to the active license service
+# In the case below it could select the ktawebapp (but only valid when we only have one deployed)
+# Next scenario will deploy license service separately (or a specific web\app with license)
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ktalicense  
+  namespace: kta  
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3581
+  selector:
+    app: ktalicense
+    

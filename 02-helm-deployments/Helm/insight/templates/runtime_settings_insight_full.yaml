@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}insight-full-config
+  namespace: {{ .Values.deployment.environmentPrefix }}kta
+data:
+  keys:
+    DataService_IsDocker=true
+    DataService_Insight.LicenseFolder=D:/
+    DataService_UseHighAvailability=true
+    DataService_Insight.UseIpAddressInsteadOfHost=true
+    DataService_Insight.Admin.MasterDBConnectionString= 
+    DataService_Insight.TenantAdmin.MasterDBConnectionString= 
+    DataService_Insight.Password="<REPLACE_ME>"
+    DataService_Insight.Admin.MasterDBName=MS SQL Server
+    Insight_DataServiceUrl=http://{{ .Values.deployment.environmentPrefix }}insight-web-service/WcfDataService/DataService.svc
+    DataService_Insight.Admin.MasterDBProviderName=sql
+    Insight_HtmlServiceUrl=http://{{ .Values.deployment.environmentPrefix }}insight-web-service/WcfDataService/HtmlDataService.svc
+    Insight_ViewerUrl=http://{{ .Values.deployment.environmentPrefix }}insight-web-service/View/Default.aspx
+    ChartSnapshot_Insight.Pdf.AdditionalArguments=--no-sandbox
+    Insight_MachineDecryptionKey=
+    Insight_MachineValidationKey=
+    Scheduler_Login=Administrator
+    Scheduler_Password="<REPLACE_ME>"
+    Scheduler_DataServiceUrl=http://{{ .Values.deployment.environmentPrefix }}insight-web-service/WcfDataService/DataService.svc
+    DashboardServer_DataServiceUrl=http://{{ .Values.deployment.environmentPrefix }}insight-web-service/WcfDataService/DataService.svc
+    DashboardServer_BridgeServiceURI=tcp://{{ .Values.deployment.environmentPrefix }}insight-scheduler-service:15870/IBridgeService.rem
+    Scheduler_UseIpAddressInsteadOfHost=true

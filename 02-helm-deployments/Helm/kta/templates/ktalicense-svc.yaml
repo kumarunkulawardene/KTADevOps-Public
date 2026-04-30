@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kta-license-service  
+  namespace: {{ .Values.deployment.environmentPrefix }}kta  
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3581
+  selector:
+    app: {{ .Values.deployment.environmentPrefix }}kta-license

@@ -1,0 +1,86 @@
+###############################################################################
+# KTA Cloud Training Series - Supporting scripts
+# Transfer image from one registry to another
+# 
+# This script includes commands that can be used transfer image from one registry 
+# to another
+#
+# Author: Kofax Professional Services Centre of Excellence (COE) 
+##############################################################################
+
+# Option 1:
+# 	1. docker pull source-registry:tag
+# 	2. docker tag source-registry:tag target-registry:tag
+# 	3. docker push target-registry:tag
+
+# Login to Azure (will launch browser to authenticate)
+# To complete the authentication flow, the Docker CLI and Docker daemon must be installed and running in your environment
+az Login
+
+# Pull the image from the source repository to local repository
+# Note the pull access should be granted to the user. If anonypous access is granted any one can pull the image. 
+docker pull sampleacr.azurecr.io/ktawebappnolicense:v7.9
+docker pull sampleacr.azurecr.io/ktalicense:v7.9
+
+# Tag the image with new repository/ACR name
+docker tag sampleacr.azurecr.io/ktawebappnolicense:v7.9 sampleacr.azurecr.io/ktawebappnolicense:v7.9
+docker tag sampleacr.azurecr.io/ktalicense:v7.9 sampleacr.azurecr.io/ktalicense:v7.9
+docker tag ktatransformation:v7.9 sampleacr.azurecr.io/ktatransformation:v7.9
+docker tag ktawebappssl:v7.9 sampleacr.azurecr.io/ktawebappssl:v7.9
+docker tag ktawebappssltal:v7.9 sampleacr.azurecr.io/ktawebappssl:v7.9
+docker tag insightschedulerssl:v6.4 sampleacr.azurecr.io/insightschedulerssl:v6.4
+docker tag insightwebssl:v6.4 sampleacr.azurecr.io/insightwebssl:v6.4
+
+#Tag 7.9.0.13 patched images
+docker tag ktawebapp:v7.9.0.13-AUG2022 sampleacr.azurecr.io/ktawebapp:v7.9.0.13-AUG2022
+docker tag ktamessageconnector:v7.9.0.13-AUG2022 sampleacr.azurecr.io/ktamessageconnector:v7.9.0.13-AUG2022
+docker tag ktalicense:v7.9.0.13-AUG2022 sampleacr.azurecr.io/ktalicense:v7.9.0.13-AUG2022
+docker tag ktareporting:v7.9.0.13-AUG2022 sampleacr.azurecr.io/ktareporting:v7.9.0.13-AUG2022
+docker tag ktatransformation:v7.9.0.13-AUG2022 sampleacr.azurecr.io/ktatransformation:v7.9.0.13-AUG2022
+
+#Tag updated insight images
+docker tag insightschedulerssl:v6.4 sampleacr.azurecr.io/insightschedulerssl:v6.4-AUG2022
+docker tag insightwebssl:v6.4 sampleacr.azurecr.io/insightwebssl:v6.4-AUG2022
+
+# Connect to ACR
+az acr login --name sampleacr.azurecr.io
+
+# Push the image
+docker push sampleacr.azurecr.io/ktawebappnolicense:v7.9
+docker push sampleacr.azurecr.io/ktalicense:v7.9
+docker push sampleacr.azurecr.io/ktawebappssl:v7.9
+docker push sampleacr.azurecr.io/ktawebappssl:v7.9
+docker push sampleacr.azurecr.io/insightwebssl:v6.4
+docker push sampleacr.azurecr.io/insightschedulerssl:v6.4
+
+# Push the image
+docker push sampleacr.azurecr.io/ktawebappssl:v7.9.0.13-AUG2022
+docker push sampleacr.azurecr.io/ktalicense:v7.9.0.13-AUG2022
+docker push sampleacr.azurecr.io/ktamessageconnector:v7.9.0.13-AUG2022
+docker push sampleacr.azurecr.io/ktareporting:v7.9.0.13-AUG2022
+docker push sampleacr.azurecr.io/ktatransformation:v7.9.0.13-AUG2022
+docker push sampleacr.azurecr.io/insightwebssl:v6.4-AUG2022
+docker push sampleacr.azurecr.io/insightschedulerssl:v6.4-AUG2022
+
+
+
+
+# Option 2:
+#   az acr import \
+#       --name <destinationRegistry> \
+#       --source <sourceRegistry>.azurecr.io/<Image:Tag> \
+#       --username <SourceRegistryUsername> \
+#       --password <SourceRegistryPassword>
+
+# Login to Azure (will launch browser to authenticate)
+az Login
+
+# Connect to ACR
+az acr login --name sampleacr.azurecr.io
+
+# Pull KTA webapp from sampleacr.azurecr.io
+### This did not work as I think the sampleacr ACR did not have the correct permissions... 
+az acr import --name sampleacr.azurecr.io --source sampleacr.azurecr.io/ktalicense:v7.9 -t ktalicense2:v7.9
+
+### This worked after adding the admin user key as the password
+az acr import --name sampleacr.azurecr.io --source sampleacr.azurecr.io/ktawebappssltal:v7.9 -t ktawebappssltal:v7.9 --username sampleacr --password Q3J8cJMcoiEk8u=+HcdLZ3yoWBNCjoK7

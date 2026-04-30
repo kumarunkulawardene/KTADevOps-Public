@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}insight-ingress
+  namespace: {{ .Values.deployment.environmentPrefix }}kta
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+    appgw.ingress.kubernetes.io/health-probe-path: "/WcfDataService/DataService.svc"
+    appgw.ingress.kubernetes.io/connection-draining-timeout: "120"
+    appgw.ingress.kubernetes.io/request-timeout: "120"
+    appgw.ingress.kubernetes.io/ssl-redirect: "true"
+    appgw.ingress.kubernetes.io/backend-protocol: "https"
+    appgw.ingress.kubernetes.io/backend-hostname: "ktawebappbe"
+    appgw.ingress.kubernetes.io/appgw-trusted-root-certificate: "kta" 
+    #appgw.ingress.kubernetes.io/use-private-ip: "true" 
+spec:
+  tls:
+     - secretName: insight-frontend-tls-secret
+       hosts:
+         - ktawebappbe
+  rules:
+    - http:
+        paths:
+          - path: '/'
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.deployment.environmentPrefix }}insight-web
+                port: 
+                  number: 443
+      host: ktawebappbe

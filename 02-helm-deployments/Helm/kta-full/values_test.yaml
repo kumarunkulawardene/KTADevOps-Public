@@ -1,0 +1,46 @@
+# Default values for kta.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+deployment:
+  environmentPrefix: "test-"
+  # JG Azure Database Server (needs Firewall IP Rule...!)
+  databaseServer: "sample-sql-server.database.windows.net" 
+  databaseUserId: "<REPLACE_ME>"
+  databasePassword: "<REPLACE_ME>"
+
+role:
+  # ROLE - License
+  license:
+    replicaCount: 1 
+    cpu: 0.2
+    cpulimit: 1
+    continerport: 3581
+  
+  # ROLE - Web App Nodes (incl. core worker)
+  webapp:
+    replicaCount: 1 
+    cpu: 0.5
+    cpulimit: 1
+    continerport: 80 
+ 
+  # ROLE - Transformation
+  transformation: 
+    replicaCount: 1 
+    cpu: 1
+    cpulimit: 1
+    continerport: 9001  
+
+  # ROLE - Message Connector
+  mc: 
+    replicaCount: 1 
+    cpu: 1
+    cpulimit: 1
+    containerport: 25086  
+
+  # ROLE - Reporting
+  reporting: 
+    replicaCount: 1 
+    cpu: 0.5
+    cpulimit: 01
+    containerport: 80 

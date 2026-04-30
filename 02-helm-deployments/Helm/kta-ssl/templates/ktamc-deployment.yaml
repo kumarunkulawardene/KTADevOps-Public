@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}ktamc-deployment
+  namespace: {{ .Values.deployment.environmentPrefix }}kta  
+spec:
+  replicas: {{ .Values.role.mc.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deployment.environmentPrefix }}kta-mc
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deployment.environmentPrefix }}kta-mc
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": windows
+      containers:
+      - name: ktamc
+        image: {{ .Values.deployment.reporsitory }}/{{ .Values.role.mc.image }}:{{ .Values.role.mc.imagetag }}
+        resources:
+          requests:
+            cpu: {{ .Values.role.mc.cpu }}
+            memory: {{ .Values.role.mc.memory }}
+          limits:
+            cpu: {{ .Values.role.mc.cpulimit }}
+            memory: {{ .Values.role.mc.memorylimit }}
+        ports:
+        - containerPort: {{ .Values.role.mc.containerport }}
+        envFrom:
+          - configMapRef:
+              name: ktamc-full-config
+          - secretRef:
+              name: kta-secrets-config
+        readinessProbe:
+          httpGet:
+            path: /en/file/index.html
+            port: {{ .Values.role.mc.containerport }}
+          periodSeconds: 3
+          timeoutSeconds: 60
+        volumeMounts:
+        - name: {{ .Values.deployment.environmentPrefix }}kta-data-azurefile
+          mountPath: "D:"
+      volumes:
+        - name: {{ .Values.deployment.environmentPrefix }}kta-data-azurefile
+          persistentVolumeClaim:
+            claimName: kta-azurefile-pvc
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+{{- /*
+       - key: "project"
+        operator: "Equal"
+        value: "kta"
+        effect: "NoSchedule" 
+*/ -}}
+

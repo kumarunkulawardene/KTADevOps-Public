@@ -1,0 +1,148 @@
+# This script will eventually be maintained as a master cluster creation script only.
+# independent of the attached container registry etc.
+# ----- CONFIGURE VARIABLES ------- 
+# Specify the azure location you wish to use.
+$location = "uksouth"
+# Specify the name of the resource group we will create to contain cluster resources
+# Note: Azure creates an additional resource group too.
+$resourceGroup = "rgakskta"
+# Specify a name for the new cluster
+$clusterName = "akskta"
+# ---------------------------------
+
+#NOTE: 
+# This script is not intended to be run end-to-end. 
+# Run individual commands as required. 
+
+# Login to Azure (will launch browser to authenticate)
+az login 
+
+# Set subscription (if more than one)
+# Enterprise
+az account set --subscription 0c3c4453-XXXX-XXXX-XXXX-XXXXXXXXXXX
+
+
+# Create Resource Group
+az group create --name $resourceGroup --location $location --tags Department="COE" ResponsibleOwner="Example Owner"
+
+az config set defaults.location=uksouth
+
+
+az aks create `
+        -g $resourceGroup `
+        --name $clusterName `
+        --enable-managed-identity `
+        --generate-ssh-keys `
+        --node-count 1 `
+        --kubernetes-version 1.26.3 `
+        --enable-addons ingress-appgw,monitoring `
+        --appgw-name ktaAppGateway `
+        --appgw-subnet-cidr "10.225.1.0/24" `
+        --windows-admin-username akskta `
+        --windows-admin-password <WINDOWS_ADMIN_PASSWORD> `
+        --network-plugin azure `
+        --tags Department="COE" ResponsibleOwner="Example Owner"
+
+#verify supported AKS versions for target region (or omit below and get default?)
+#az aks get-versions -l ukwest
+
+# CLUSTER OPTION 1 - DEV ONLY PUBLIC NETWORK
+# Create AKS Cluster (with Managed Identity) - HTTP_APPLICAITON_ROUTING ADD-ON (Non Prod Only)
+# Must add Windows Credentials to suport windows node pools being added later
+# Password must be min 14 chars (include lower, upper, number, special character...3 of 4)
+# az aks create -g rgkta --name akskta --enable-managed-identity --generate-ssh-keys --node-count 1 --kubernetes-version 1.20.7 --enable-addons  http_application_routing,monitoring --windows-admin-username akskta --windows-admin-password <WINDOWS_ADMIN_PASSWORD> --network-plugin azure
+
+# CLUSTER OPTION 2 - AGIC
+# Create AKS Cluster with Managed Identity - (Azure Gateway Ingress Controller AGIC)
+# Must add Windows Credentials to suport windows node pools being added later
+# Password must be min 14 chars (include lower, upper, number, special character...3 of 4)
+# CAN BE DEPLOYED USING HELM, BUT THIS 'ADD-ON' MECHANISM IS EASIER AND IS FULLY MANAGED (UPDATES ETC.)
+az aks create --resource-group COE-RG --name akskta --tags ResponsibleOwner="Example Owner" Department="COE" --enable-managed-identity --generate-ssh-keys --node-count 1 --kubernetes-version 1.22.11 --enable-addons ingress-appgw,monitoring --appgw-name ktaAppGateway --appgw-subnet-cidr "10.2.0.0/16" --windows-admin-username akskta --windows-admin-password <WINDOWS_ADMIN_PASSWORD> --network-plugin azure
+
+
+
+az aks create `
+        -g $resourceGroup `
+        --name $clusterName `
+        --enable-managed-identity `
+        --generate-ssh-keys `
+        --node-count 1 `
+        --kubernetes-version 1.26.3 `
+        --enable-addons ingress-appgw,monitoring `
+        --appgw-name ktaAppGateway `
+        --appgw-subnet-cidr "10.225.1.0/24" `
+        --windows-admin-username akskta `
+        --windows-admin-password <WINDOWS_ADMIN_PASSWORD> `
+        --network-plugin azure `
+        --tags Department="COE" ResponsibleOwner="Example Owner"
+
+#Optional - View the cluster(s) status
+az aks list -o table
+
+# If you have issues with the supported Kubernetes version in your target location
+# Verify supported AKS versions for target region (or omit above and use current location default)
+az aks get-versions -l $location
+
+# CLUSTER OPTION 2 - DEV ONLY PUBLIC NETWORK
+# Create AKS Cluster (with Managed Identity) - HTTP_APPLICAITON_ROUTING ADD-ON (Non Prod Only)
+# Must add Windows Credentials to suport windows node pools being added later
+# Password must be min 14 chars (include lower, upper, number, special character...3 of 4)
+# az aks create 
+#        -g $resourceGroup `
+#        --name $clusterName `
+#        --enable-managed-identity `
+#        --generate-ssh-keys `
+#        --node-count 1 `
+#        --kubernetes-version 1.20.7 `
+#        --enable-addons  http_application_routing,monitoring `
+#        --windows-admin-username akskta `
+#        --windows-admin-password <WINDOWS_ADMIN_PASSWORD> `
+#        --network-plugin azure
+
+# Add a Windows node Pool to host KTA containers.
+az aks nodepool add --cluster-name $clusterName -g $resourceGroup -n winp1 --mode User --node-vm-size Standard_D4s_v3 --os-type Windows --os-sku Windows2019 --node-osdisk-size 100 --node-count 1 --max-pods 10
+
+az aks nodepool add `
+--cluster-name $clusterName `
+-g $resourceGroup `
+-n winp1 `
+--mode User `
+--node-vm-size Standard_D4s_v3 `
+--os-type Windows `
+--os-sku Windows2019 `
+--node-osdisk-size 100 `
+--node-count 1 `
+--max-pods 10
+
+
+# SCALING TOPIC
+
+# OPTIONAL - Enable node Autoscaler (post deployment example)
+az aks nodepool update `
+        --resource-group $resourceGroup `
+        --cluster-name $clusterName `
+        --name winp1 `
+        --enable-cluster-autoscaler `
+        --min-count 1 `
+        --max-count 3
+
+# OPTIONAL - Update Node Autoscaler Settings
+ az aks nodepool update `
+        --resource-group $resourceGroup `
+        --cluster-name $clusterName `
+        --name winp1 `
+        --update-cluster-autoscaler `
+        --min-count 2 `
+        --max-count 4
+
+#note: pool name max 6 chars
+az aks nodepool add --cluster-name $clusterName --resource-group $resourceGroup -n winp1 --mode User --node-vm-size Standard_D4s_v3 --os-type Windows --node-osdisk-size 100 --node-count 1 --max-pods 10
+
+# Enable node Autoscaler - underlying VMs not containers
+az aks nodepool update --resource-group $resourceGroup --cluster-name $clusterName --name winp1 --enable-cluster-autoscaler --min-count 1 --max-count 3
+# az aks nodepool update --resource-group rgkta --cluster-name akskta --name pool1 --update-cluster-autoscaler --min-count 1 --max-count 3
+
+
+az aks nodepool delete --cluster-name $clusterName `
+                       --name winp1 `
+                       --resource-group $resourceGroup

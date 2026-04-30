@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpa-mc-config
+  namespace: {{ .Values.deployment.environmentPrefix }}kta
+data:
+  keys:
+    CONTEXT_RESOURCE_VALIDATIONQUERY=SELECT 1
+    CONTEXT_RESOURCE_USERNAME=sa
+    CONTEXT_RESOURCE_PASSWORD=<DB_PASSWORD>
+    CONTEXT_RESOURCE_DRIVERCLASSNAME=com.microsoft.sqlserver.jdbc.SQLServerDriver
+    CONTEXT_RESOURCE_URL=jdbc:sqlserver://sqlserver-host:1433;databaseName=scheduler
+    CONTEXT_CHECK_DATABASE_TIMEOUT=600
+    CONFIG_LICENSE_NAME=
+    CONFIG_LICENSE_EMAIL=
+    CONFIG_LICENSE_COMPANY=
+    CONFIG_LICENSE_PRODUCTIONKEY=
+    CONFIG_LICENSE_NONPRODUCTIONKEY=
+    SERVICE_OAUTH_KAPPLETS_SECRET=
+    SERVICE_OAUTH_SYNCHRONIZER_SECRET=@synchronizerClientSecret@

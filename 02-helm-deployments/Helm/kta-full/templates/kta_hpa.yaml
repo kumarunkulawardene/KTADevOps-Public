@@ -1,0 +1,44 @@
+#KTA WebApp Horizontal Pod Auto sclling
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}kta-deployment-hpa
+spec:
+  minReplicas: {{ .Values.role.webapp.hpaminreplicas }} # define max replica count
+  maxReplicas: {{ .Values.role.webapp.hpamaxreplicas }}  # define min replica count
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.deployment.environmentPrefix }}kta-deployment
+  targetCPUUtilizationPercentage: {{ .Values.role.webapp.hpatargetcpu }}  # target CPU utilization
+
+---
+#Transformation Horizontal Pod Auto sclling
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}ktatransformation-deployment-hpa
+spec:
+  minReplicas: {{ .Values.role.transformation.hpaminreplicas }} # define max replica count
+  
+  maxReplicas: {{ .Values.role.transformation.hpamaxreplicas }}  # define min replica count
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.deployment.environmentPrefix }}ktatransformation-deployment
+  targetCPUUtilizationPercentage: {{ .Values.role.transformation.hpatargetcpu }}  # target CPU utilization
+
+---
+#Message Connector Horizontal Pod Auto sclling
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}ktamc-deployment-hpa
+spec:
+  minReplicas: {{ .Values.role.mc.hpaminreplicas }} # define max replica count
+  maxReplicas: {{ .Values.role.mc.hpamaxreplicas }}  # define min replica count
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.deployment.environmentPrefix }}ktamc-deployment
+  targetCPUUtilizationPercentage: {{ .Values.role.mc.hpatargetcpu }} # target CPU utilization

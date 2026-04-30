@@ -1,0 +1,149 @@
+############################################################################
+# KTA Cloud Training Series – Session 7
+# Deploying KTA Containers to Azure Kubernetes Service (AKS)
+# Script 1 - Cluster Creation (v1.0)
+# This script creates an AKS Cluster utilising Azure Gateway for Cluster Ingress
+#
+# This is a training script. Execute individual comand lines as required. 
+#
+# WIP - Experimenting with OIDC Preview Support in AKS for Managed Identity Authentication   
+############################################################################
+
+# ----- CONFIGURE VARIABLES ------- 
+# Specify the azure location you wish to use.
+$location = "uksouth"
+# Specify the name of the resource group we will create to contain cluster resources
+# Note: Azure creates an additional resource group too.
+$resourceGroup = "COE-RG"
+# Specify a name for the new cluster
+$clusterName = "COE-KTA-AKS"
+# ---------------------------------
+
+# Login to Azure (will launch browser to authenticate)
+# You don't need this if executing from Cloud Shell (as you're already logged in)
+#az login 
+
+# Set subscription (if your login is associated with more than one)
+# This is not necessary if  your login is associated with only one subscription.
+az account set --subscription "<your subscription ID here>"
+
+# OIDC Issuer Feature - PREVIEW
+#To use the OIDC Issuer feature, you must enable the EnableOIDCIssuerPreview feature flag on your subscription
+az feature register --name EnableOIDCIssuerPreview --namespace Microsoft.ContainerService
+# Check Status
+az feature list -o table --query "[?contains(name, 'Microsoft.ContainerService/EnableOIDCIssuerPreview')].{Name:name,State:properties.state}"
+#When ready, refresh the registration of the Microsoft.ContainerService resource provider
+az provider register --namespace Microsoft.ContainerService
+
+# Install the aks-preview extension
+az extension add --name aks-preview
+
+# Update the extension to make sure you have the latest version installed
+az extension update --name aks-preview
+
+# CLUSTER OPTION 1 - AGIC
+# Create AKS Cluster with Managed Identity - (using Azure Gateway Ingress Controller AGIC)
+# Must provide Windows Credentials to suport windows node pools being added later
+# Password must be min 14 chars (include lower, upper, number, special character...3 of 4)
+az aks create `
+        -g $resourceGroup `
+        --name $clusterName `
+        --enable-managed-identity `
+        --generate-ssh-keys `
+        --node-count 1 `
+        --enable-addons ingress-appgw,monitoring `
+        --appgw-name ktaAppGateway `
+        --appgw-subnet-cidr "10.225.1.0/24" `
+        --windows-admin-username akskta `
+        --windows-admin-password <WINDOWS_ADMIN_PASSWORD> `
+        --network-plugin azure `
+        --tags Department="COE" ResponsibleOwner="John Gallagher" `
+        --enable-oidc-issuer
+        #--kubernetes-version 1.24.0 `
+# To update a cluster to use OIDC Issuer
+# az aks update -n  $clusterName -g $resourceGroup --enable-oidc-issuer
+
+#Show the OIDC Issuer URL
+az aks show -n $clusterName -g $resourceGroup --query "oidcIssuerProfile.issuerUrl" -otsv
+e.g. https://oidc.prod-aks.azure.com/<GUID>/
+
+#Optional - View the cluster(s) status
+az aks list -o table
+
+# If you have issues with the supported Kubernetes version in your target location
+# Verify supported AKS versions for target region (or omit above and use current location default)
+az aks get-versions -l $location
+
+# CLUSTER OPTION 2 - DEV ONLY PUBLIC NETWORK
+# Create AKS Cluster (with Managed Identity) - HTTP_APPLICAITON_ROUTING ADD-ON (Non Prod Only)
+# Must add Windows Credentials to suport windows node pools being added later
+# Password must be min 14 chars (include lower, upper, number, special character...3 of 4)
+# az aks create 
+#        -g $resourceGroup `
+#        --name $clusterName `
+#        --enable-managed-identity `
+#        --generate-ssh-keys `
+#        --node-count 1 `
+#        --kubernetes-version 1.20.7 `
+#        --enable-addons  http_application_routing,monitoring `
+#        --windows-admin-username akskta `
+#        --windows-admin-password <WINDOWS_ADMIN_PASSWORD> `
+#        --network-plugin azure
+
+# Add a Windows node Pool to host KTA containers.
+az aks nodepool add `
+        --cluster-name $clusterName `
+        -g $resourceGroup `
+        -n pool1 `
+        --mode User `
+        --node-vm-size Standard_D4s_v3 `
+        --os-type Windows `
+        --node-osdisk-size 100 `
+        --node-count 1 `
+        --max-pods 50
+
+
+# SCALING TOPIC
+
+# AKS Creates an addiitonal Resource Group dynamically. We can work out what it will be...
+$AKSClusterRG = "MC_" + $resourceGroup + "_" + $clusterName + "_" + $location
+# e.g. MC_COE-RG_COE-KTA-AKS_uksouth
+
+# Gateway defaults to 2 instances - only want one for testing...determine if pricing is impacted (...enabling autoscale may be alternative)
+az network application-gateway update --name ktaAppGateway --resource-group $AKSClusterRG --capacity 1
+
+az network application-gateway update [--add]
+                                      [--capacity]
+                                      [--custom-error-pages]
+                                      [--force-string]
+                                      [--http2 {Disabled, Enabled}]
+                                      [--ids]
+                                      [--max-capacity]
+                                      [--min-capacity]
+                                      [--name]
+                                      [--no-wait]
+                                      [--remove]
+                                      [--resource-group]
+                                      [--set]
+                                      [--sku {Standard_Large, Standard_Medium, Standard_Small, Standard_v2, WAF_Large, WAF_Medium, WAF_v2}]
+                                      [--tags]
+
+
+# OPTIONAL - Enable node Autoscaler (post deployment example)
+az aks nodepool update `
+        --resource-group $resourceGroup `
+        --cluster-name $clusterName `
+        --name pool1 `
+        --enable-cluster-autoscaler `
+        --min-count 1 `
+        --max-count 3
+
+# OPTIONAL - Update Node Autoscaler Settings
+ az aks nodepool update `
+        --resource-group $resourceGroup `
+        --cluster-name $clusterName `
+        --name pool1 `
+        --update-cluster-autoscaler `
+        --min-count 1 `
+        --max-count 4
+

@@ -1,0 +1,373 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aks-kta
+  namespace: kta  
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aks-kta
+  template:
+    metadata:
+      labels:
+        app: aks-kta
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": windows
+      containers:
+      - name: ktawebapp
+        image: sampleacr.azurecr.io/ktawebappnolicense:v7.9
+        resources:
+          requests:
+            cpu: '1'
+            memory: 4Gi
+          limits:
+            cpu: '2'
+            memory: 4Gi
+        ports:
+        - containerPort: 80
+        envFrom:
+          - configMapRef:
+              name: ktawebapp-config-secure
+
+        env:
+          - name: KTA_CoreWorkerService--Agility.Server.Core.WorkerService.exe.config_MainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_MainDB_ConnectionString
+
+          - name: KTA_CoreWorkerService--Agility.Server.Core.WorkerService.exe.config_AuditDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_AuditDB_ConnectionString
+
+          - name: KTA_CoreWorkerService--Agility.Server.Core.WorkerService.exe.config_ArchiveDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_FinishDB_ConnectionString
+
+          - name: KTA_CoreWorkerService--Agility.Server.Core.WorkerService.exe.config_DataLayer
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_DocsDB_ConnectionString
+
+          - name: KTA_CoreWorkerService--Agility.Server.Core.WorkerService.exe.config_ReportingMainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportDB_ConnectionString
+
+          - name: KTA_CoreWorkerService--Agility.Server.Core.WorkerService.exe.config_ReportingStagingDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportStageDB_ConnectionString 
+
+          - name: LicensingDatabase
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_LicenseDB_ConnectionString
+                
+          - name: KTA_CoreWorkerService--Agility.Server.StreamingService.exe.config_MainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_MainDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--bin--Agility.Server.StreamingService.exe.config_MainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_MainDB_ConnectionString 
+
+          - name: KTA_CoreWorkerService--Agility.Server.StreamingService.exe.config_AuditDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_AuditDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--bin--Agility.Server.StreamingService.exe.config_AuditDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_AuditDB_ConnectionString 
+
+          - name: KTA_CoreWorkerService--Agility.Server.StreamingService.exe.config_ArchiveDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_FinishDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--bin--Agility.Server.StreamingService.exe.config_ArchiveDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_FinishDB_ConnectionString 
+
+          - name: KTA_CoreWorkerService--Agility.Server.StreamingService.exe.config_DataLayer
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_DocsDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--bin--Agility.Server.StreamingService.exe.config_DataLayer
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_DocsDB_ConnectionString 
+
+          - name: KTA_CoreWorkerService--Agility.Server.StreamingService.exe.config_ReportingMainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--bin--Agility.Server.StreamingService.exe.config_ReportingMainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportDB_ConnectionString 
+
+          - name: KTA_CoreWorkerService--Agility.Server.StreamingService.exe.config_ReportingStagingDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportStageDB_ConnectionString 
+          
+          - name: KTA_Agility.Server.Web--bin--Agility.Server.StreamingService.exe.config_ReportingStagingDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportStageDB_ConnectionString 
+  
+          - name: KTA_Agility.Server.Web--web.config_MainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_MainDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web.TenantManagement--web.config_MainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_MainDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--web.config_AuditDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_AuditDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web.TenantManagement--web.config_AuditDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_AuditDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--web.config_ArchiveDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_FinishDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web.TenantManagement--web.config_ArchiveDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_FinishDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--web.config_DataLayer
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_DocsDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web.TenantManagement--web.config_DataLayer
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_DocsDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--web.config_ReportingMainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web.TenantManagement--web.config_ReportingMainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--web.config_ReportingStagingDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportStageDB_ConnectionString 
+          
+          - name: KTA_Agility.Server.Web.TenantManagement--web.config_ReportingStagingDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportStageDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--bin--Agility.Server.Core.Executor.exe.config_MainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_MainDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web.TenantManagement--web.config_MainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_MainDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--bin--Agility.Server.Core.Executor.exe.config_AuditDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_AuditDB_ConnectionString 
+
+          - name: KTA_CoreWorkerService--Agility.Server.Core.Executor.exe.config_AuditDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_AuditDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--bin--Agility.Server.Core.Executor.exe.config_ArchiveDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_FinishDB_ConnectionString 
+
+          - name: KTA_CoreWorkerService--Agility.Server.Core.Executor.exe.config_ArchiveDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_FinishDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--bin--Agility.Server.Core.Executor.exe.config_DataLayer
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_DocsDB_ConnectionString 
+
+          - name: KTA_CoreWorkerService--Agility.Server.Core.Executor.exe.config_DataLayer
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_DocsDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--bin--Agility.Server.Core.Executor.exe.config_ReportingMainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportDB_ConnectionString 
+
+          - name: KTA_CoreWorkerService--Agility.Server.Core.Executor.exe.config_ReportingMainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportDB_ConnectionString 
+
+          - name: KTA_Agility.Server.Web--bin--Agility.Server.Core.Executor.exe.config_ReportingStagingDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportStageDB_ConnectionString 
+          
+          - name: KTA_CoreWorkerService--Agility.Server.Core.Executor.exe.config_ReportingStagingDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportStageDB_ConnectionString 
+                  
+          - name: KTA_CoreWorkerService--Agility.Server.Core.WorkerService.exe.config_MainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_MainDB_ConnectionString 
+
+          - name: KTA_CoreWorkerService--Agility.Server.Core.WorkerService.exe.config_AuditDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_AuditDB_ConnectionString 
+
+          - name: KTA_CoreWorkerService--Agility.Server.Core.WorkerService.exe.config_ArchiveDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_FinishDB_ConnectionString 
+
+          - name: KTA_CoreWorkerService--Agility.Server.Core.WorkerService.exe.config_DataLayer
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_DocsDB_ConnectionString 
+
+          - name: KTA_CoreWorkerService--Agility.Server.Core.WorkerService.exe.config_ReportingMainDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportDB_ConnectionString 
+
+          - name: KTA_CoreWorkerService--Agility.Server.Core.WorkerService.exe.config_ReportingStagingDBConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: kta-connection-strings
+                key: KTA_ReportStageDB_ConnectionString 
+          
+        readinessProbe:
+          httpGet:
+            path: /TotalAgility/Services/SDK/ServerService.svc
+            port: 80
+          periodSeconds: 3
+          timeoutSeconds: 60
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aks-kta  
+  namespace: kta  
+spec:
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  selector:
+    app: aks-kta
+---
+# healthprobe path not being applied below - added readiness probe above and that works (don't know if below required)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aks-kta
+  namespace: kta
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+    appgw.ingress.kubernetes.io/health-probe-path: "/TotalAgility/Services/SDK/ServerService.svc"
+spec:
+  rules:
+    - http:
+        paths:
+          - path: '/'
+            pathType: Prefix
+            backend:
+              service:
+                name: aks-kta
+                port: 
+                  number: 80
+  # defaultBackend:
+  #   service:
+  #     name: aks-kta
+  #     port:
+  #       number: 80

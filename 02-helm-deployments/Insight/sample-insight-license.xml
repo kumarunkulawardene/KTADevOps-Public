@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<InsightLicense Id="<LICENSE_ID>" InternalLicenseId="<LICENSE_NUMBER>" Name="Example Customer" StartTime="<START_TIME_UTC>" EndTime="<END_TIME_UTC>" MaximumNamedUsers="0" MaximumConcurrentUsers="0" MaximumDataSources="0">
+  <Permissions>
+    <Permission id="<PERMISSION_ID>" value="Access" />
+  </Permissions>
+  <Signature>&lt;LICENSE_SIGNATURE&gt;</Signature>
+</InsightLicense>

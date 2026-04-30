@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}rpamc-ingress
+  namespace: {{ .Values.deployment.environmentPrefix }}kta
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+    appgw.ingress.kubernetes.io/health-probe-path: "/login.jsp"
+    appgw.ingress.kubernetes.io/connection-draining-timeout: "120"
+    appgw.ingress.kubernetes.io/request-timeout: "120"
+    appgw.ingress.kubernetes.io/backend-path-prefix: "/"
+    appgw.ingress.kubernetes.io/override-frontend-port: "8080"
+spec:
+  rules:
+    - http:
+        paths:
+          - path: '/'
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.deployment.environmentPrefix }}rpa-mc-service
+                port: 
+                  number: 8080

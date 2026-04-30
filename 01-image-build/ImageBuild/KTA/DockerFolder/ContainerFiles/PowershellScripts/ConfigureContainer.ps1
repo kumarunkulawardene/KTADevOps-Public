@@ -1,0 +1,214 @@
+﻿﻿param($KTARole)
+# Check if SilentConfig exists for the KTA role requested
+if(Test-Path -path "C:\KTA\SillentConfigs\SilentInstallConfig_$KTARole.xml") 
+{
+	# Copying Silent Config to TotalAgilityInstall folder
+	Copy-Item "C:\KTA\SillentConfigs\SilentInstallConfig_$KTARole.xml" "C:\KTA\TotalAgilityInstall\SilentInstallConfig.xml"
+	
+	filter timestamp {"$(Get-Date -Format G): $_"}
+	Write-output "Success: Silent Config copied" | timestamp
+}
+else
+{
+	filter timestamp {"$(Get-Date -Format G): $_"}
+	Write-output "Error: SilientConfig not found" | timestamp
+}
+
+# install prerequisites for TA
+filter timestamp {"$(Get-Date -Format G): $_"}
+write-output "Install prerequisites for KTA" | timestamp
+Invoke-Expression C:\KTA\PowershellScripts\InstallWindowsFeatures.ps1
+
+filter timestamp {"$(Get-Date -Format G): $_"}
+write-output "Add Admin user for KTA" | timestamp
+
+# Add KTA_Admin account local system 
+Invoke-Expression C:\KTA\PowershellScripts\AddAdminUser.ps1
+Invoke-Expression C:\KTA\PowershellScripts\UpdateAdminUser.ps1
+
+# Install self signed cert
+filter timestamp {"$(Get-Date -Format G): $_"}
+write-output "Install Self signed cert" | timestamp
+Invoke-Expression C:\KTA\PowershellScripts\CreateHttpsCert.ps1;
+
+# Install fonts
+filter timestamp {"$(Get-Date -Format G): $_"}
+write-output "Install Windows Fonts" | timestamp
+Invoke-Expression C:\KTA\PowershellScripts\install_fonts.ps1;
+
+# Deleting Transformation Designer folder
+$strings=@("TransformationDesigner*")
+get-childitem -path "C:\KTA\" -Include ($strings) -Recurse -force | ForEach-Object {
+    try {
+		#  -ErrorAction Ignore is being used to suppress known issue in Docker on Windows Server 2016 with deletion
+        Remove-Item $_ -Force –Recurse -ErrorAction Ignore
+		}
+    catch { }
+	}
+
+# Download and install prerequisites for KCMProxy in silent mode
+
+# Download URL Rewrite
+wget https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi -OutFile "C:\rewrite_amd64_en-US.msi"
+# Download Application Request Routing
+wget http://download.microsoft.com/download/E/9/8/E9849D6A-020E-47E4-9FD0-A023E99B54EB/requestRouter_amd64.msi -OutFile "C:\requestRouter_amd64.msi"
+# Install URL Rewrite
+$url = Start-Process msiexec.exe -ArgumentList '/i','C:\rewrite_amd64_en-US.msi','/qn','/log C:\URLRewrite.log' -Wait -PassThru
+if ($url.ExitCode -ne 0)
+{
+    Write-Host("Error occured while installing URL Rewrite, please refer to C:\URLRewrite.log inside the container for more details")
+}
+# Install Application Request Routing
+$arr = Start-Process msiexec.exe -ArgumentList '/i','C:\requestRouter_amd64.msi','/qn','/log C:\ApplicationRequestRouting.log' -Wait -PassThru
+if ($arr.ExitCode -ne 0)
+{
+    Write-Host("Error occured while installing URL Rewrite, please refer to C:\ApplicationRequestRouting.log inside the container for more details")
+}
+
+# Configuring MS-DTC for cross DB transactions
+filter timestamp {"$(Get-Date -Format G): $_"}
+try {   
+   write-output "Enable MS DTC" | timestamp
+   Set-DtcNetworkSetting -DtcName "Local" -AuthenticationLevel "NoAuth" -InboundTransactionsEnabled $true -OutboundTransactionsEnabled $true -RemoteClientAccessEnabled $true -RemoteAdministrationAccessEnabled $true  -XATransactionsEnabled $true -LUTransactionsEnabled $true -Confirm:$false
+   
+   # Display network settings
+   $dtcSettings = Get-DtcNetworkSetting
+   write-output $dtcSettings
+}
+catch {
+  write-output "Error Setting MSDTC Settings" | timestamp
+}
+
+#Update Registry for ExampleCustomer (added 15/08/2022)
+try {   
+	write-output "Updating Registry to restrict null session and anonymous access" | timestamp
+	
+	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters' -Name 'restrictnullsessaccess' -Value '1'
+
+	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name 'restrictanonymous' -Value '1'
+}
+catch {
+  write-output "Error Registry Update" | timestamp
+}
+
+
+# Install TA in silent mode
+filter timestamp {"$(Get-Date -Format G): $_"}
+write-output "Start silent Install" | timestamp
+
+# -passthru is used to get output from the command
+if(Test-Path -path "C:\KTA\TotalAgilityInstall\setup.exe") {
+$proc = Start-Process C:\KTA\TotalAgilityInstall\setup.exe -argumentlist '/silent' -wait -PassThru
+
+# Copying Encrypt utility to powershellscripts folder
+Copy-Item "C:\KTA\Utilities\Kofax.CEBPM.EncryptConfig.exe" "C:\KTA\PowershellScripts\Kofax.CEBPM.EncryptConfig.exe"
+}
+elseif(Test-Path -path "C:\KTA\OnPremiseMultiTenancyInstall\setup.exe") {
+$proc = Start-Process C:\KTA\OnPremiseMultiTenancyInstall\setup.exe -argumentlist '/silent' -wait -PassThru
+
+# Copying Encrypt utility to powershellscripts folder
+Copy-Item "C:\KTA\Utilities\Kofax.CEBPM.EncryptConfig.exe" "C:\KTA\PowershellScripts\Kofax.CEBPM.EncryptConfig.exe"
+}
+elseif(Test-Path -path "C:\KTA\IntegrationServerInstall\setup.exe") {
+$proc = Start-Process C:\KTA\IntegrationServerInstall\setup.exe -argumentlist '/silent' -wait -PassThru
+
+# Copying Encrypt utility to powershellscripts folder
+Copy-Item "C:\KTA\Utilities\Kofax.CEBPM.EncryptConfig.exe" "C:\KTA\PowershellScripts\Kofax.CEBPM.EncryptConfig.exe"
+}
+
+# Setting the KTA service startup type to manual to prevent automatic startup of services during container creation
+	Get-Service| ForEach-Object {	
+    if ($_.DisplayName.StartsWith("Kofax")) {
+        Set-Service -Name  $_.Name -StartupType Manual -Status "Stopped" -PassThru;        
+	}
+}
+if ($proc.ExitCode -ne 0) {
+	filter timestamp {"$(Get-Date -Format G): $_"}
+	Write-output "Install failed with errors" | timestamp
+    Get-ChildItem -Path "C:\Users\ContainerAdministrator\Desktop" | Where-Object {$_.Name.StartsWith("KofaxTotalAgility")} | ForEach-Object {get-content $_.FullName}
+}
+
+# KK 04072022 start change - added fix pack install code
+# Install TA Fixpack in silent mode
+filter timestamp {"$(Get-Date -Format G): $_"}
+write-output "Start Fixpack silent Install" | timestamp
+
+# -passthru is used to get output from the command
+if(Test-Path -path "C:\KTA\KTA-Fixpack\TotalAgilityInstall\setup.exe") {
+$proc2 = Start-Process C:\KTA\KTA-Fixpack\TotalAgilityInstall\setup.exe -argumentlist '/silent /hotfix' -wait -PassThru
+}
+
+# Setting the KTA service startup type to manual to prevent automatic startup of services during container creation
+	Get-Service| ForEach-Object {	
+    if ($_.DisplayName.StartsWith("Kofax")) {
+        Set-Service -Name  $_.Name -StartupType Manual -Status "Stopped" -PassThru;        
+	}
+}
+
+if ($proc2.ExitCode -ne 0) {
+	filter timestamp {"$(Get-Date -Format G): $_"}
+	Write-output "Install FixPack failed with errors" | timestamp
+    Get-ChildItem -Path "C:\Users\ContainerAdministrator\Desktop" | Where-Object {$_.Name.StartsWith("KofaxTotalAgility")} | ForEach-Object {
+                            Write-Output $_.Name
+                            get-content $_.FullName
+                        }
+}
+# KK 04072022 end change
+
+#KK 11112022 start change - Copy doc converter ini
+if(Test-Path -path "C:\KTA\ContainerFiles\Other\KFXConverter.ini") 
+{
+	# Copying doc converter ini
+	Copy-Item "C:\KTA\ContainerFiles\Other\KFXConverter.ini" "C:\Program Files (x86)\Kofax\Document Converter\bin\KFXConverter\KFXConverter.ini"
+	
+	filter timestamp {"$(Get-Date -Format G): $_"}
+	Write-output "Success: doc converter ini copied" | timestamp
+}
+# KK 11112022 end change
+
+
+elseif ($proc.ExitCode -eq 0 -And $proc2.ExitCode -eq 0) {	
+
+	filter timestamp {"$(Get-Date -Format G): $_"}
+	Write-output "Completed silent Install" | timestamp
+	
+	Write-output "Install Logs"
+	Get-ChildItem -Path "C:\Users\ContainerAdministrator\Desktop" | Where-Object {$_.Name.StartsWith("KofaxTotalAgility")} | ForEach-Object {
+                            Write-Output $_.Name
+                            get-content $_.FullName
+                        }
+						
+	filter timestamp {"$(Get-Date -Format G): $_"}
+	Write-output "Delete Program Cache" | timestamp
+	# Delete Program Cache
+
+	Get-ChildItem -LiteralPath 'C:\ProgramData\Package Cache\'  -Recurse | 
+	Select -ExpandProperty FullName | 
+	sort length -Descending | 
+		ForEach-Object {
+			try {
+					#  -ErrorAction Ignore is being used to suppress known issue in Docker on Windows Server 2016 with deletion
+					Remove-Item -path $_ -force -ErrorAction Ignore;
+				}
+			catch { }
+		}
+	filter timestamp {"$(Get-Date -Format G): $_"}
+	Write-output "Program Cache deletion completed" | timestamp
+	
+	filter timestamp {"$(Get-Date -Format G): $_"}
+	Write-output "Delete installation media" | timestamp
+	# Deleting Installation media since installation was successful	
+	Get-ChildItem -Path  "C:\KTA\" -Recurse -exclude loktarogar.txt | 
+	Select -ExpandProperty FullName | 
+	Where {$_ -notlike "C:\KTA\PowershellScripts*"} | 
+	sort length -Descending | 
+	ForEach-Object {
+	try {
+		#  -ErrorAction Ignore is being used to suppress known issue in Docker on Windows Server 2016 with deletion
+		Remove-Item -path $_ -force -ErrorAction Ignore;
+		}
+	catch { }
+	}
+	filter timestamp {"$(Get-Date -Format G): $_"}
+	Write-output "Installation media deletion completed" | timestamp	
+}

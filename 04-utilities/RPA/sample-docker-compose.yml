@@ -1,0 +1,166 @@
+version: '3'
+networks:
+  net:
+services:
+  mysql:
+    image: mysql:5
+    environment:
+      - MYSQL_ROOT_PASSWORD=<DB_PASSWORD>
+      - MYSQL_DATABASE=scheduler
+      - MYSQL_USER=scheduler
+      - MYSQL_PASSWORD=<DB_PASSWORD>
+    networks:
+      - net
+  mysqldata:
+    image: mysql:5
+    environment:
+      - MYSQL_ROOT_PASSWORD=<DB_PASSWORD>
+      - MYSQL_DATABASE=objectdb
+      - MYSQL_USER=scott
+      - MYSQL_PASSWORD=<DB_PASSWORD>
+    ports:
+      - 3308:3306
+    volumes:
+      - 'C:\docker\data\mysqldb:/var/lib/mysql'
+    networks:
+      - net
+  managementconsole:
+    image: registry.kapowlabs.net/ci/managementconsole:latest
+    depends_on:
+      - mysql
+    ports:
+      - 8080:8080
+    networks:
+      - net
+    environment:
+      - CONFIG_SECURITY_JDBCDRIVERUPLOAD=ANY_HOST
+      - CONTEXT_RESOURCE_VALIDATIONQUERY=SELECT 1
+      - CONTEXT_RESOURCE_USERNAME=scheduler
+      - CONTEXT_RESOURCE_PASSWORD=<DB_PASSWORD>
+      - CONTEXT_RESOURCE_DRIVERCLASSNAME=com.mysql.jdbc.Driver
+      - CONTEXT_RESOURCE_URL=jdbc:mysql://mysql:3306/scheduler?useUnicode=yes&characterEncoding=UTF-8&rewriteBatchedStatements=true
+      # LogDB setup
+      - SETTINGS_ENTRY_COUNT=7
+      - SETTINGS_ENTRY_KEY_1=USE_LOGDB
+      - SETTINGS_ENTRY_VALUE_1=true
+      - SETTINGS_ENTRY_KEY_2=LOGDB_SCHEMA
+      - SETTINGS_ENTRY_VALUE_2=scheduler
+      - SETTINGS_ENTRY_KEY_3=LOGDB_HOST
+      - SETTINGS_ENTRY_VALUE_3=mysql:3306
+      - SETTINGS_ENTRY_KEY_4=LOGDB_TYPE
+      - SETTINGS_ENTRY_VALUE_4=MySQL Database
+      - SETTINGS_ENTRY_KEY_5=LOGDB_USERNAME
+      - SETTINGS_ENTRY_VALUE_5=scheduler
+      - SETTINGS_ENTRY_KEY_6=LOGDB_PASSWORD
+      - SETTINGS_ENTRY_VALUE_6=schedulerpassword
+      # Base URL setup
+      - SETTINGS_ENTRY_KEY_7=BASE_URL
+      - SETTINGS_ENTRY_VALUE_7=http://localhost:8080
+    
+### License
+      # None
+      #- CONFIG_LICENSE_COMPANY=
+      - CONFIG_LICENSE_NAME=Enter Name
+      - CONFIG_LICENSE_EMAIL=name@kofax.com
+  #11.0.0.0
+      - CONFIG_LICENSE_COMPANY=Company
+      - CONFIG_LICENSE_PRODUCTIONKEY=key
+      - CONFIG_LICENSE_NONPRODUCTIONKEY=key
+    
+
+#### RoboServer
+  roboserver:
+    image: registry.kapowlabs.net/ci/roboserver:latest
+    depends_on:
+      - managementconsole
+      - mysql
+    networks:
+      - net
+    volumes:
+      - 'C:\docker\data:/data'
+    environment:
+      - ROBOSERVER_SEC_ALLOW_FILE_SYSTEM_ACCESS=true
+      - ROBOSERVER_SEC_ACCEPT_JDBC_DRIVERS=true
+      - ROBOSERVER_ENABLE_MC_REGISTRATION=true
+      - ROBOSERVER_MC_URL=http://managementconsole:8080/
+      - ROBOSERVER_MC_CLUSTER=Production
+      - ROBOSERVER_MC_USERNAME=admin
+      - ROBOSERVER_MC_PASSWORD=<DB_PASSWORD>
+      - ROBOSERVER_ENABLE_SOCKET_SERVICE=true
+      - WRAPPER_MAX_MEMORY=2048
+  
+### Kapplets
+#  kapplets-service:
+#    image: registry.kapowlabs.net/ci/kapplets:latest
+#    depends_on:
+#      - mysql-service
+#      - managementconsole
+#    ports:
+#      - 8081:8080
+#      - 5005
+#    environment:
+#      - SPRING_DATASOURCE_USERNAME=kapplets
+#      - SPRING_DATASOURCE_PASSWORD=<DB_PASSWORD>
+#      - SPRING_DATASOURCE_DRIVERCLASSNAME=com.mysql.jdbc.Driver
+#      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-service:3306/kapplets?autoReconnect=true&useSSL=false&useLegacyDatetimeCode=false&serverTimezone=UTC
+#      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.MySQL5InnoDBDialect
+#      - KAPPLETS_SERVICES_MC_CONNECTION_URL=http://managementconsole:8080/
+#      - KAPPLETS_SERVICES_MC_CONNECTION_USERNAME=admin
+#      - KAPPLETS_SERVICES_MC_CONNECTION_PASSWORD=<DB_PASSWORD>
+#      - JAVA_OPTS=-agentlib:jdwp=transport=dt_socket,server=<DB_SERVER>
+#      - SLEEP_DELAY=30s
+#    networks:
+#      - net
+#  mysql-service:
+#    image: mysql:5
+#    environment:
+#      - MYSQL_ROOT_PASSWORD=<DB_PASSWORD>
+#      - MYSQL_DATABASE=kapplets
+#      - MYSQL_USER=kapplets
+#      - MYSQL_PASSWORD=<DB_PASSWORD>
+#    networks:
+#      - net
+#    ports:
+#      - 3306
+
+### RFS
+#  robotfilesystem:
+#    #build:
+#    #  context: .
+#    #  dockerfile: docker/robotfilesystem/Dockerfile
+#    image: registry.kapowlabs.net/ci/robotfilesystem:latest
+#    depends_on:
+#      - managementconsole
+#    ports:
+#      - 81:8080
+#    networks:
+#      - net
+#    volumes:
+#      - 'C:\docker\data:/data'
+#    environment:
+#      - RFS_MC_URL=http://managementconsole:8080/
+#      - RFS_MC_USERNAME=admin
+#      - RFS_MC_PASSWORD=<DB_PASSWORD>
+#      - RFS_DATA_PATH=/data
+#      - RFS_CREATE_FOLDERS=true
+
+### synchronizer
+#  synchronizer:
+#    #build:
+#    # context: .
+#    # dockerfile: docker/synchronizer/Dockerfile
+#    image: registry.kapowlabs.net/ci/synchronizer:latest
+#    depends_on:
+#      - managementconsole
+#    networks:
+#      - net
+#    volumes:
+#      - 'C:\Users\niki.mench\Documents\key\id_rsa:/kapow/gitkeys/id_rsa'
+#    environment:
+#      - COMPOSE_CONVERT_WINDOWS_PATHS=1
+#      - SYNCHRONIZER_MC_URL=http://managementconsole:8080/
+#      - SYNCHRONIZER_USERNAME=admin
+#      - SYNCHRONIZER_PASSWORD=<DB_PASSWORD>
+#      - SYNCHRONIZER_INTERVAL=5
+#      - SYNCHRONIZER_PRIVATE_KEY=/kapow/gitkeys/id_rsa
+#      - SYNCHRONIZER_NO_HOST_KEY=true

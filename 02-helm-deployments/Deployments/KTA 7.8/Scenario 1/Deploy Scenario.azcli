@@ -1,0 +1,46 @@
+#NOTE: 
+# This script is not intended to be run end-to-end. 
+# Run individual commands as required. 
+
+# Login to Azure (will launch browser to authenticate)
+az login 
+
+# Set subscription (if more than one)
+# Premium
+az account set --subscription a8e0919a-XXXXX-XXXXX-XXXXX-XXXXXXXXXXXX
+
+#Create a namespace for the deployments, pods etc.
+# fails at this point as cluster context is still old one...
+#kubectl delete namespaces kta
+kubectl create -f namespace-kta.yaml
+
+#kubectl delete configmap ktawebapp-config --namespace kta
+#Upload the relevant run-time settings file.
+kubectl create configmap ktawebapp-config --from-env-file=DockerSettingsAzure.Env --namespace kta
+
+#attach ACR -
+#note: 
+#   use full resource string when in differnet subscription otherwise name is enough
+#   deploy to same datacenter to avoid data transfer costs
+# Different Subscription...
+az aks update -g rgkta --name akskta --attach-acr /subscriptions/a8e0919a-XXXXX-XXXXX-XXXXX-XXXXXXXXXXXX/resourceGroups/rgWinDocker2019/providers/Microsoft.ContainerRegistry/registries/sampleacr
+# Same Subscription...
+az aks update -g rgkta --name akskta --attach-acr sampleacr
+
+#confirm access to AKR - note: might throw error anyway...
+az aks check-acr -g rgkta --name akskta --acr /subscriptions/a8e0919a-XXXXX-XXXXX-XXXXX-XXXXXXXXXXXX/resourceGroups/rgWinDocker2019/providers/Microsoft.ContainerRegistry/registries/sampleacr
+az aks check-acr -g rgkta --name akskta --acr sampleacr
+
+#Container Deployment \ Update - Declarative Command
+kubectl apply -f deploy_ktawebapp_AGIC.yaml
+
+# Compare YAML to actual deployment - Requires Diff Util (for windows)...install chocolatey and then use chocco diffutil
+#kubectl diff -f deploy_ktawebapp_AGIC.yaml
+
+#USEFUL COMMANDS
+#Get IP details
+kubectl --namespace default get services -o wide -w akskta
+
+# Examine run logs
+kubectl get pods -n kta
+kubectl logs <podname> -n kta

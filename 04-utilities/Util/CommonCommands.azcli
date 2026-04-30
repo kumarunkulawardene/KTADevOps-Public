@@ -1,0 +1,58 @@
+###############################################################################
+# KTA Cloud Training Series - Supporting scripts
+# Useful commands
+# 
+# This script includes some useful commands when working with Azure  
+#
+# Author: Kofax Professional Services Centre of Excellence (COE) 
+##############################################################################
+
+#Delete deployment
+#might have to set the current namespace before deleting deployment
+kubectl config set-context --current --namespace="kta"
+#Optional: check what deployments are running in the current namespace
+kubectl get deployment
+#Delete the deployment
+kubectl delete deployment kta-deployment
+
+
+# Stop\Start AKS Cluster
+az aks stop -g $resourceGroup --name $clusterName
+az aks start -g $resourceGroup --name $clusterName
+
+#Delete AKS Cluster
+az aks delete -g $resourceGroup --name $clusterName
+
+# Clean up resource group 
+# use this command if you want to delete all resources in the resource group
+## Azure PowerShell
+Remove-AzResourceGroup -ResourceGroupName $resourceGroup
+## Azure CLI
+az group delete --name $resourceGroup
+
+
+# Set current context to a specific cluster
+az aks get-credentials --resource-group=$resourceGroup --name=$clusterName
+
+
+#Upgrade existing nodepool to Windows Server 2019
+# https://docs.microsoft.com/en-us/azure/aks/windows-container-cli#:~:text=When%20using%20containerd%20with%20Windows%20Server%202019%20node,containerd.%20You%20must%20create%20a%20new%20node%20pool.
+
+az aks upgrade `
+    --resource-group COE-RG `
+    --name akskta `
+    --name pool1 `
+    --kubernetes-version 1.20.7 `
+    --aks-custom-headers WindowsContainerRuntime=containerd
+
+#Get Kubernetes nodepool details
+kubectl get nodes -o wide
+
+
+#Copy files to pod
+kubectl cp .\root.cer kta-deployment-d78ff7798-9vmsx:c:/kta/root.cer -n kta
+
+
+#Remove all files
+Get-ChildItem -Path d:\ktadata\export -Include *.* -File -Recurse | foreach { $_.Delete()}
+Remove-Item d:\ktadata\export\* -Recurse -Force

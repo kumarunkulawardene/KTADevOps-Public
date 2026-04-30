@@ -1,0 +1,79 @@
+# Default values for kta deployment.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+deployment:
+  environmentPrefix: ""
+  # ExampleCustomer Azure Database Server (needs Firewall IP Rule...!)
+  databaseServer: "sample-sql-server.database.windows.net" 
+  databaseUserId: "<REPLACE_ME>"
+  databasePassword: "<REPLACE_ME>"
+  repository: "sampleacr.azurecr.io"
+
+role:
+  # ROLE - License
+  license:
+    image: ktalicense
+    imagetag: v7.9.0.15-AUG2022
+    replicaCount: 1 
+    cpu: 1
+    memory: 1000M
+    cpulimit: 1
+    memorylimit: 1000M
+    containerport: 3581
+  
+  # ROLE - Web App Nodes (incl. core worker)
+  webapp:
+    image: ktawebappssl
+    imagetag: v7.9.0.15-AUG2022
+    replicaCount: 1
+    #hpaminreplicas: 1
+    #hpamaxreplicas: 1
+    #hpatargetcpu: 70
+    cpu: 1
+    memory: 2000M
+    cpulimit: 2
+    memorylimit: 2000M
+    containerport: 443
+    sharename: ktadata
+    scheme: HTTPS
+        
+  # ROLE - Transformation
+  transformation: 
+    image: ktatransformation
+    imagetag: v7.9
+    replicaCount: 0
+    #hpaminreplicas: 1
+    #hpamaxreplicas: 1
+    #hpatargetcpu: 70
+    cpu: 1
+    memory: 1000M
+    cpulimit: 2
+    memorylimit: 2000M
+    containerport: 9001 
+    sharename: kta-data 
+  
+  # ROLE - Message Connector
+  mc: 
+    image: ktamessageconnector
+    imagetag: v7.9
+    replicaCount: 0
+    #hpaminreplicas: 1
+    #hpamaxreplicas: 1
+    #hpatargetcpu: 70
+    cpu: 1
+    memory: 1000M
+    cpulimit: 1
+    memorylimit: 1000M
+    containerport: 25086 
+    # frontendport: 80
+
+  # ROLE - Reporting
+  reporting: 
+    image: ktareporting
+    imagetag: v7.9
+    replicaCount: 0
+    cpu: 0.2
+    memory: 200M
+    cpulimit: 0.5
+    memorylimit: 800M

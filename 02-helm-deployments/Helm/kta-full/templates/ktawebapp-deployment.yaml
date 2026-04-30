@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}kta-deployment
+  namespace: {{ .Values.deployment.environmentPrefix }}kta  
+spec:
+  replicas: {{ .Values.role.webapp.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deployment.environmentPrefix }}kta-webapp
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deployment.environmentPrefix }}kta-webapp
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": windows
+      containers:
+      - name: ktawebapp
+        image: sampleacr.azurecr.io/ktawebapp:v7.9
+        command: ["powershell"]
+        args: ["C:\\KTA\\PowershellScripts\\Startup.ps1"]
+        resources:
+          requests:
+            cpu: {{ .Values.role.webapp.cpu }}
+            memory: {{ .Values.role.webapp.memory }}
+          limits:
+            cpu: {{ .Values.role.webapp.cpulimit }}
+            memory: {{ .Values.role.webapp.memorylimit }}
+        ports:
+        - containerPort: {{ .Values.role.webapp.containerport }}
+        envFrom:
+          - configMapRef:
+              name: kta-full-config
+          - secretRef:
+              name: kta-secrets-config
+        readinessProbe:
+          httpGet:
+            path: /TotalAgility/Services/SDK/ServerService.svc
+            port: 80
+            #scheme: HTTPS
+          periodSeconds: 30
+          timeoutSeconds: 60
+        volumeMounts:
+          - name: {{ .Values.deployment.environmentPrefix }}kta-data-azurefile
+            mountPath: "D:"
+      volumes:
+        - name: {{ .Values.deployment.environmentPrefix }}kta-data-azurefile
+          persistentVolumeClaim:
+            claimName: kta-azurefile-pvc

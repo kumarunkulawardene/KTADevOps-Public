@@ -1,0 +1,20 @@
+# https://azure.github.io/application-gateway-kubernetes-ingress/features/appgw-ssl-certificate/
+
+# https://azure.github.io/application-gateway-kubernetes-ingress/annotations/
+
+ az network application-gateway ssl-cert create -g $resgp  --gateway-name $appgwName -n mysslcert --cert-file \path\to\cert\file --cert-password Abc123
+
+# configure certificate to app gateway
+az network application-gateway ssl-cert create `
+  --resource-group MC_COE-RG_aksktakk_uksouth `
+  --gateway-name ktaAppGateway `
+  -n kta `
+  --cert-file  C:\KTA\Certs\Sep2022\ktawebappbe.pfx `
+  --cert-password "XXXXXXXXX"
+
+  az network application-gateway root-cert create `
+  --resource-group MC_COE-RG_akskta_uksouth `
+  --gateway-name ktaAppGateway `
+  -n kta `
+  --cert-file  C:\KTA\Certs\Sep2022\ktawebappbe.cer `
+  --cert-password "XXXXXXXXX"

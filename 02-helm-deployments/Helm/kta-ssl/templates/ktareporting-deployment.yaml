@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}ktareporting-deployment
+  namespace: {{ .Values.deployment.environmentPrefix }}kta
+spec:
+  replicas: {{ .Values.role.reporting.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deployment.environmentPrefix }}kta-reporting
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deployment.environmentPrefix }}kta-reporting
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": windows
+      containers:
+      - name: ktareporting
+        image: {{ .Values.deployment.reporsitory }}/{{ .Values.role.reporting.image }}:{{ .Values.role.reporting.imagetag }}
+        resources:
+          requests:
+            cpu: {{ .Values.role.reporting.cpu }}
+            memory: {{ .Values.role.reporting.memory }}
+          limits:
+            cpu: {{ .Values.role.reporting.cpulimit }}
+            memory: {{ .Values.role.reporting.memorylimit }}
+        ports:
+          - containerPort: 80
+        envFrom:
+          - configMapRef:
+              name: kta-full-config
+          - secretRef:
+              name: ktareporting-secrets-config     
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+{{- /*
+       - key: "project"
+        operator: "Equal"
+        value: "kta"
+        effect: "NoSchedule" 
+*/ -}}

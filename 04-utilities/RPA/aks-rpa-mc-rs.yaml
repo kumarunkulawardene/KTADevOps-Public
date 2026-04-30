@@ -1,0 +1,166 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mc
+  template:
+    metadata:
+      labels:
+        app: mc
+    spec:
+      nodeSelector:
+        kubernetes.io/os: windows
+      containers:
+      - name: mc
+        image: sampleacr.azurecr.io/managementconsole:v1
+#        resources:
+#          requests:
+#            cpu: 100m
+#            memory: 128Mi
+#          limits:
+#            cpu: 250m
+#            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: mc
+          
+        env:
+        - name: CONFIG_SECURITY_JDBCDRIVERUPLOAD
+          value: ANY_HOST
+        - name: CONTEXT_RESOURCE_VALIDATIONQUERY
+          value: SELECT 1
+        - name: CONTEXT_RESOURCE_USERNAME
+          value: rpasqladmin
+        - name: CONTEXT_RESOURCE_PASSWORD
+          value: XXXXXXXXX
+        - name: CONTEXT_RESOURCE_DRIVERCLASSNAME
+          value: com.microsoft.sqlserver.jdbc.SQLServerDriver
+        - name: CONTEXT_RESOURCE_URL
+          value: jdbc:sqlserver://sample-sql-server.database.windows.net:1433;database=;user=rpasqladmin;password=<DB_PASSWORD>;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;3
+          
+      # LogDB setup
+#        - name: SETTINGS_ENTRY_COUNT
+#          value: 7
+#        - name: SETTINGS_ENTRY_KEY_1
+#          value: USE_LOGDB
+#        - name: SETTINGS_ENTRY_VALUE_1
+#          value: true
+#        - name: SETTINGS_ENTRY_KEY_2
+#          value: LOGDB_SCHEMA
+#        - name: SETTINGS_ENTRY_VALUE_2
+#          value: scheduler
+#        - name: SETTINGS_ENTRY_KEY_3
+#          value: LOGDB_HOST
+#        - name: SETTINGS_ENTRY_VALUE_3
+#          value: mysql:3306
+#        - name: SETTINGS_ENTRY_KEY_4
+#          value: LOGDB_TYPE
+#        - name: SETTINGS_ENTRY_VALUE_4
+#          value: MySQL Database
+#        - name: SETTINGS_ENTRY_KEY_5
+#          value: LOGDB_USERNAME
+#        - name: SETTINGS_ENTRY_VALUE_5
+#          value: scheduler
+#        - name: SETTINGS_ENTRY_KEY_6
+#          value: LOGDB_PASSWORD
+#        - name: SETTINGS_ENTRY_VALUE_6
+#          value: schedulerpassword
+      # Base URL setup
+        - name: SETTINGS_ENTRY_KEY_7
+          value: BASE_URL
+        - name: SETTINGS_ENTRY_VALUE_7
+          value: http://localhost:8080
+    
+      ### License
+      # None
+      # - name: CONFIG_LICENSE_COMPANY
+#          value: 
+#        - name: CONFIG_LICENSE_NAME
+#          value: ExampleUser
+#        - name: CONFIG_LICENSE_EMAIL
+#          value: name@kofax.com
+      #11.0.0.0
+#        - name: CONFIG_LICENSE_COMPANY
+#          value: Company
+#        - name: CONFIG_LICENSE_PRODUCTIONKEY
+#          value: key
+#        - name: CONFIG_LICENSE_NONPRODUCTIONKEY
+#          value: key
+
+            
+#---
+#apiVersion: v1
+#kind: Service
+#metadata:
+#  name: azure-vote-back
+#spec:
+#  ports:
+#  - port: 6379
+#  selector:
+#    app: azure-vote-back
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: roboserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: roboserver
+  template:
+    metadata:
+      labels:
+        app: roboserver
+    spec:
+      nodeSelector:
+        kubernetes.io/os: windows
+      containers:
+      - name: roboserver
+        image: sampleacr.azurecr.io/roboserver:v1
+#        resources:
+#          requests:
+#            cpu: 100m
+#            memory: 128Mi
+#          limits:
+#            cpu: 250m
+#            memory: 256Mi
+        env:
+        - name: ROBOSERVER_SEC_ALLOW_FILE_SYSTEM_ACCESS
+          value: true
+        - name: ROBOSERVER_SEC_ACCEPT_JDBC_DRIVERS
+          value: true
+        - name: ROBOSERVER_ENABLE_MC_REGISTRATION
+          value: true
+        - name: ROBOSERVER_MC_URL
+          value: http://mc:8080/
+        - name: ROBOSERVER_MC_CLUSTER
+          value: Production
+        - name: ROBOSERVER_MC_USERNAME
+          value: admin
+        - name: ROBOSERVER_MC_PASSWORD
+          value: admin
+        - name: ROBOSERVER_ENABLE_SOCKET_SERVICE
+          value: true
+        - name: WRAPPER_MAX_MEMORY
+          value: 2048
+        ports:
+        - containerPort: 50000
+#        env:
+#        - name: REDIS
+#          value: "azure-vote-back"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mc
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8080
+  selector:
+    app: mc

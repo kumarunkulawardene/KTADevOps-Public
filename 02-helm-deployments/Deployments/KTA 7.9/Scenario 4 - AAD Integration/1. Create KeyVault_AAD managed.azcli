@@ -1,0 +1,92 @@
+############################################################################
+# KTA Cloud Training Series – Session 10
+# KTA Container Security in Azure Kubernetes Service (AKS)
+# Cluster Creation (v1.0) with KeyVault Support
+
+# This script demonstrates how to create a KeyVault and 
+# insert SSL certificates and connection string secrets 
+# 
+# WIP - Experimenting with database connection using Managed Identity
+############################################################################
+
+# ----- CONFIGURE VARIABLES ------- 
+# Specify the azure location you wish to use.
+$location = "uksouth"
+# Specify the name of the resource group we will create to contain cluster resources
+# Note: Azure creates an additional resource group too.
+$resourceGroup = "COE-RG"
+# Specify a name for the new cluster
+$clusterName = "COE-KTA-AKS"
+
+$keyVault = "sample-key-vault"
+# ---------------------------------
+
+# Login to Azure (will launch browser to authenticate)
+# You don't need this if executing from Cloud Shell (as you're already logged in)
+az login 
+
+# Set subscription (if your login is associated with more than one)
+# This is not necessary if  your login is associated with only one subscription.
+az account set --subscription "<your subscription ID here>"
+
+# Create a Key Vault
+az keyvault create -n $keyVault -g $resourceGroup -l $location
+
+# Typically this will already exist, so the scripting here is for convenience
+
+## Upload certificate to KeyVault.
+## We are using a SSL cert, an intermediary cert and a root cert (all self signed)
+
+## Upload certificate to KeyVault.
+az keyvault certificate import `
+    --vault-name $keyVault `
+    --name "test-example-cert-cert" `
+    --file ".\Certificates\test-example-cert-cert.pfx" `
+    --password "XXXXXXXXX"
+
+## We wouldn't expect to have the full public\private certificate key, but KeyVault 'Certificate' requires both...
+## Do do, look at use of standard 'secret' to hold the public cert only.
+az keyvault certificate import `
+    --vault-name $keyVault `
+    --name "example-cert-inter-cert" `
+    --file ".\Certificates\example-cert-inter3-cert.pfx" `
+    --password "XXXXXXXXX"
+
+## We wouldn't expect to have the full public\private certificate key, but KeyVault 'Certificate' requires both...
+## Do do, look at use of standard 'secret' to hold the public cert only.
+az keyvault certificate import `
+    --vault-name $keyVault `
+    --name "example-cert-root-cert" `
+    --file ".\Certificates\example-cert-root-cert.pfx" `
+    --password "XXXXXXXXX"
+
+# Add database connection strings to KeyVault
+az keyvault secret set `
+    --vault-name $keyVault `
+    --name "DBConn-TotalAgility-Licensing" `
+    --value "Data Source=<DB_SERVER>;Trusted_Connection=No;Initial Catalog=TotalAgility;User Id=<DB_USER>;Password=<DB_PASSWORD>;"
+az keyvault secret set `
+    --vault-name $keyVault `
+    --name "DBConn-TotalAgility-Live" `
+    --value "Server=<DB_SERVER>;Authentication=Active Directory Managed Identity;Database=TotalAgility;"
+az keyvault secret set `
+    --vault-name $keyVault `
+    --name "DBConn-TotalAgility-Archive" `
+    --value "Server=<DB_SERVER>;Authentication=Active Directory Managed Identity;Database=TotalAgility;"
+az keyvault secret set `
+    --vault-name $keyVault `
+    --name "DBConn-TotalAgility-Audit" `
+    --value "Server=<DB_SERVER>;Authentication=Active Directory Managed Identity;Database=TotalAgility"
+az keyvault secret set `
+    --vault-name $keyVault `
+    --name "DBConn-TotalAgility-Documents" `
+    --value "Server=<DB_SERVER>;Authentication=Active Directory Managed Identity;Database=TotalAgility_Documents;"
+az keyvault secret set `
+    --vault-name $keyVault `
+    --name "DBConn-TotalAgility-ReportingStaging" `
+    --value "Server=<DB_SERVER>;Authentication=Active Directory Managed Identity;Database=TotalAgility_Reporting_Staging;"
+az keyvault secret set `
+    --vault-name $keyVault `
+    --name "DBConn-TotalAgility-Reporting" `
+    --value "Server=<DB_SERVER>;Authentication=Active Directory Managed Identity;Database=TotalAgility_Reporting;"
+

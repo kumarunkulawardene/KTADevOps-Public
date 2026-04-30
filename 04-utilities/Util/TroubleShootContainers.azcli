@@ -1,0 +1,43 @@
+###############################################################################
+# KTA Cloud Training Series - Supporting scripts
+# Troubleshoot KTA container deployments
+# 
+# This script includes commands that can be used connecto to container pods and 
+# troubleshoot KTA issues
+#
+# Author: Kofax Professional Services Centre of Excellence (COE) 
+##############################################################################
+
+
+#Get pods in cluter
+kubectl get pods -n kta
+
+#chek logs in container/pod
+kubectl logs kta-deployment-844ddd7d8-x5zxj -n kta
+
+#Connet to container powershell interatively
+kubectl exec -it kta-deployment-844ddd7d8-x5zxj -n kta -- powershell
+
+#Once connectoed powershell of the container get the windows events for KTA
+get-eventlog -Logname Application -newest 20 -source "TotalAgility" | format-table -auto -wrap
+get-eventlog -Logname Application -newest 20 -source "KofaxTransformationServerService" | format-table -auto -wrap
+get-eventlog -Logname Application -newest 5 | format-table -auto -wrap
+
+#Check windows services
+Get-Service
+Stop-Service  "Kofax Transformation Server"
+stop-service "KofaxTAReportingServerService"
+start-service  "KofaxTAReportingServerService"
+start-service  "KIC-ED-MC"
+
+
+#Get log file content
+##Select last 10 lines
+Get-Content -Path C:\Programdata\Kofax\KIC-ED\MC\Log\MC_002.log | Select-Object -Last 10
+Get-Content -Path C:\Programdata\Kofax\KFXConverter\KFXConverter.log | Select-Object -Last 10
+
+#Get memory usage
+Get-WmiObject WIN32_PROCESS | Sort-Object -Property ws -Descending | Select-Object -first 19 ProcessID,Name,WS
+
+#Find files 
+get-childitem -include *.crp2 -File -Recurse -ErrorAction SilentlyContinue

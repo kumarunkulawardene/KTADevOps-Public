@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ktalicense7.9.x-deployment
+  namespace: kta
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kta-license
+  template:
+    metadata:
+      labels:
+        app: kta-license
+    spec:
+      nodeSelector: 
+        "kubernetes.io/os": windows
+      containers:
+      - name: ktalicense
+        image: sampleacr.azurecr.io/ktalicense:v7.9.x
+        resources:
+          requests:
+            cpu: 1
+            memory: 1Gi
+          limits:
+            cpu: 1
+            memory: 1Gi
+        ports:
+        - containerPort: 3581
+        envFrom:
+          - configMapRef:
+              name: kta-full-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kta-license-service  
+  namespace: kta  
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3581
+  selector:
+    app: kta-license

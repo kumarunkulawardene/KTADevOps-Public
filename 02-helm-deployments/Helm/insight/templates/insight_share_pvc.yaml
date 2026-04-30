@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}insight-data-azurefile
+  namespace: {{ .Values.deployment.environmentPrefix }}kta
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: {{ .Values.deployment.environmentPrefix }}insight-data-azurefile
+  resources:
+    requests:
+      storage: 1Gi

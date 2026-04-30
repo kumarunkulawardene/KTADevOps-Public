@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}ktamc-ingress
+  namespace: {{ .Values.deployment.environmentPrefix }}kta
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+    appgw.ingress.kubernetes.io/health-probe-path: "/en/file/index.html"
+    appgw.ingress.kubernetes.io/connection-draining-timeout: "120"
+    appgw.ingress.kubernetes.io/request-timeout: "120"
+    appgw.ingress.kubernetes.io/backend-path-prefix: "/"
+    appgw.ingress.kubernetes.io/override-frontend-port: "5003"
+spec:
+  rules:
+    - http:
+        paths:
+          - path: '/'
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.deployment.environmentPrefix }}kta-mc-service
+                port: 
+                  number: 25086

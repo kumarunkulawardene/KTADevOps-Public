@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}ktalicense-deployment
+  namespace: {{ .Values.deployment.environmentPrefix }}kta
+spec:
+  replicas: {{ .Values.role.license.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deployment.environmentPrefix }}kta-license
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deployment.environmentPrefix }}kta-license
+    spec:
+      containers:
+      - name: ktalicense
+        image: sampleacr.azurecr.io/ktalicense:v7.9
+        resources:
+          requests:
+            cpu: 1
+            memory: 1Gi
+          limits:
+            cpu: 1
+            memory: 1Gi
+        ports:
+        - containerPort: 3581
+        envFrom:
+          - configMapRef:
+              name: kta-full-config
+        env:
+          - name: LicensingDatabase
+            valueFrom:
+              secretKeyRef:
+                name: kta-secrets-config
+                key: LicensingDatabase
+                

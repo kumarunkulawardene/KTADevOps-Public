@@ -1,0 +1,29 @@
+#Insight Scheduler Horizontal Pod Auto sclling
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}insight-scheduler-deployment-hpa
+spec:
+  minReplicas: {{ .Values.role.scheduler.hpaminreplicas }} # define max replica count
+  maxReplicas: {{ .Values.role.scheduler.hpamaxreplicas }}  # define min replica count
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.deployment.environmentPrefix }}insight-scheduler-deployment
+  targetCPUUtilizationPercentage: {{ .Values.role.scheduler.hpatargetcpu }}  # target CPU utilization
+
+---
+#Transformation Horizontal Pod Auto sclling
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}insight-deployment-hpa
+spec:
+  minReplicas: {{ .Values.role.web.hpaminreplicas }} # define max replica count
+  maxReplicas: {{ .Values.role.web.hpamaxreplicas }}  # define min replica count
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.deployment.environmentPrefix }}insight-deployment
+  targetCPUUtilizationPercentage: {{ .Values.role.web.hpatargetcpu }}  # target CPU utilization
+

@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}insight-scheduler-deployment
+  namespace: {{ .Values.deployment.environmentPrefix }}kta
+spec:
+  replicas: {{ .Values.role.scheduler.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deployment.environmentPrefix }}insight-scheduler
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deployment.environmentPrefix }}insight-scheduler
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": windows
+      containers:
+        - name: {{ .Values.deployment.environmentPrefix }}insight-scheduler
+          image: {{ .Values.deployment.repository }}/{{ .Values.role.scheduler.image }}:{{ .Values.role.scheduler.imagetag }}
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: {{ .Values.role.scheduler.cpu }}
+              memory: {{ .Values.role.scheduler.memory }}
+            limits:
+              cpu: {{ .Values.role.scheduler.cpulimit }}
+              memory: {{ .Values.role.scheduler.memorylimit }}
+          ports:
+            - containerPort: {{ .Values.role.scheduler.containerport }}
+          envFrom:
+            - configMapRef:
+               name: {{ .Values.deployment.environmentPrefix }}insight-full-config
+            - secretRef:
+                name: {{ .Values.deployment.environmentPrefix }}insight-scheduler-secrets-config
+          volumeMounts:
+          - name: {{ .Values.deployment.environmentPrefix }}insight-data-azurefile
+            mountPath: "D:"
+      volumes:
+        - name: {{ .Values.deployment.environmentPrefix }}insight-data-azurefile
+          persistentVolumeClaim:
+            claimName: insight-azurefile-pvc
+      {{- /*
+ tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule" 
+*/ -}}
+{{- /*
+       - key: "project"
+        operator: "Equal"
+        value: "kta"
+        effect: "NoSchedule" 
+*/ -}}

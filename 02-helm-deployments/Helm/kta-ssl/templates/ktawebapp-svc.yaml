@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}kta-webapp-service  
+  namespace: {{ .Values.deployment.environmentPrefix }}kta  
+spec:
+  ports:
+  - protocol: TCP
+    port: {{ .Values.role.webapp.containerport }}
+    targetPort: {{ .Values.role.webapp.containerport }}
+  selector:
+    app: {{ .Values.deployment.environmentPrefix }}kta-webapp
+    

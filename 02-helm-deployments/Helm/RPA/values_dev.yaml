@@ -1,0 +1,46 @@
+# Default values for kta deployment.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+deployment:
+  environmentPrefix: ""
+  # JG Azure Database Server (needs Firewall IP Rule...!)
+  databaseServer: "sample-sql-server.database.windows.net" 
+  databaseUserId: "<REPLACE_ME>"
+  databasePassword: "<REPLACE_ME>"
+  reporsitory: "sampleacr.azurecr.io"
+
+role:
+    
+  # ROLE - Management Console
+  mc: 
+    image: rpamanagementconsole
+    imagetag: v11.4
+    replicaCount: 1
+    hpaminreplicas: 1
+    hpamaxreplicas: 2
+    hpatargetcpu: 70
+    cpu: 1
+    memory: 2000M
+    cpulimit: 1
+    memorylimit: 2000M
+    containerport: 8080 
+    sharename: rpadata
+    # frontendport: 80
+
+  roboserver: 
+    image: rparoboserver
+    imagetag: v11.4
+    replicaCount: 1
+    hpaminreplicas: 1
+    hpamaxreplicas: 2
+    hpatargetcpu: 70
+    cpu: 1
+    memory: 1000M
+    cpulimit: 1
+    memorylimit: 1000M
+    containerport: 80 
+    sharename: rpadata
+    # frontendport: 80
+
+ 

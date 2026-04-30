@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.environmentPrefix }}kta-deployment
+  namespace: {{ .Values.deployment.environmentPrefix }}kta  
+spec:
+  replicas: {{ .Values.role.webapp.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deployment.environmentPrefix }}kta-webapp
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deployment.environmentPrefix }}kta-webapp
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": windows
+      containers:
+      - name: ktawebapp
+        image: {{ .Values.deployment.repository }}/{{ .Values.role.webapp.image }}:{{ .Values.role.webapp.imagetag }}
+        #imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: {{ .Values.role.webapp.cpu }}
+            memory: {{ .Values.role.webapp.memory }}
+          limits:
+            cpu: {{ .Values.role.webapp.cpulimit }}
+            memory: {{ .Values.role.webapp.memorylimit }}
+        ports:
+        - containerPort: {{ .Values.role.webapp.containerport }}
+        envFrom:
+          - configMapRef:
+              name: kta-full-config
+          - secretRef:
+              name: kta-secrets-config
+        readinessProbe:
+          httpGet:
+            path: /TotalAgility/Services/SDK/ServerService.svc
+            port: 443
+            scheme: HTTPS
+            host: ktawebappbe
+          periodSeconds: 10
+          timeoutSeconds: 60
+        volumeMounts:
+          - name: {{ .Values.deployment.environmentPrefix }}kta-data-azurefile
+            mountPath: "D:"
+      volumes:
+        - name: {{ .Values.deployment.environmentPrefix }}kta-data-azurefile
+          persistentVolumeClaim:
+            claimName: kta-azurefile-pvc
+{{- /*
+       tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule" 
+*/ -}}
+{{- /*
+       - key: "project"
+        operator: "Equal"
+        value: "kta"
+        effect: "NoSchedule" 
+*/ -}}

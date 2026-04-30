@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aks-kta
+  namespace: kta  
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aks-kta
+  template:
+    metadata:
+      labels:
+        app: aks-kta
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": windows
+      containers:
+      - name: ktawebapp
+        image: sampleacr.azurecr.io/ktawebapp:v7.8
+        resources:
+          requests:
+            cpu: '1'
+            memory: 2Gi
+          limits:
+            cpu: '2'
+            memory: 4Gi
+        ports:
+        - containerPort: 80
+        envFrom:
+          - configMapRef:
+              name: ktawebapp-config
+        readinessProbe:
+          httpGet:
+            path: /TotalAgility/Services/SDK/ServerService.svc
+            port: 80
+          periodSeconds: 3
+          timeoutSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aks-kta  
+  namespace: kta  
+spec:
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  selector:
+    app: aks-kta
+---
+
+# healthprobe path not being applied below - added readiness probe above and that works (don't know if below still required)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aks-kta
+  namespace: kta
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+    appgw.ingress.kubernetes.io/health-probe-path: "/TotalAgility/Services/SDK/ServerService.svc"
+spec:
+  rules:
+    - http:
+        paths:
+          - path: '/'
+            pathType: Prefix
+            backend:
+              service:
+                name: aks-kta
+                port: 
+                  number: 80
+  # defaultBackend:
+  #   service:
+  #     name: aks-kta
+  #     port:
+  #       number: 80

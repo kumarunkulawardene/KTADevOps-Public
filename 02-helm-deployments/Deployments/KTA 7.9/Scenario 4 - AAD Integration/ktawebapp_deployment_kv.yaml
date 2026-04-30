@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ktawebappkv
+  namespace: kta  
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kta-webapp
+  template:
+    metadata:
+      labels:
+        app: kta-webapp
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": windows
+      containers:
+      - name: ktawebapp
+        image: sampleacr.azurecr.io/ktawebapp:v7.9.0.9
+        resources:
+          requests:
+            cpu: '1'
+            memory: 2Gi
+          limits:
+            cpu: '2'
+            memory: 4Gi
+        ports:
+        - containerPort: 80
+        envFrom:
+          - configMapRef:
+              name: kta-full-config
+          - secretRef:
+              name: kta-secrets-db-config
+        volumeMounts:
+          -   name: secrets-store02-inline
+              mountPath: "c:\\secrets-store2"
+              readOnly: true
+        readinessProbe:
+          httpGet:
+            scheme: HTTP
+            path: /TotalAgility/Services/SDK/ServerService.svc
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 60
+          timeoutSeconds: 60
+      volumes:
+        - name: secrets-store02-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "kvkta-db-config"
